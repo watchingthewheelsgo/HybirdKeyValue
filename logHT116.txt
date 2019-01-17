@@ -1,0 +1,489 @@
+Function testHashTable performance.
+Loading data, size = 60M.key Length = 16B
+Loading 10M...
+ Malloc time = 1127694(us).
+ Inert time = 1454188(us).
+conflictCnt = 46481, Max conflict = 2, dupKeyCnt = 0.
+Get perf test 2M, time = 357848.
+Loading 20M...
+ Malloc time = 2251330(us).
+ Inert time = 2936012(us).
+conflictCnt = 186126, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 363458.
+Loading 30M...
+ Malloc time = 3373901(us).
+ Inert time = 4446655(us).
+conflictCnt = 419197, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 365290.
+Loading 40M...
+ Malloc time = 4495276(us).
+ Inert time = 5989823(us).
+conflictCnt = 746051, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 356736.
+Loading 50M...
+ Malloc time = 5617824(us).
+ Inert time = 7562130(us).
+conflictCnt = 1164638, Max conflict = 5, dupKeyCnt = 0.
+Get perf test 2M, time = 363530.
+Loading 60M...
+ Malloc time = 6739621(us).
+ Inert time = 9164061(us).
+conflictCnt = 1676420, Max conflict = 5, dupKeyCnt = 0.
+Get perf test 2M, time = 368016.
+Loading 60M KV pair finished.
+
+
+Under 60M KV pairs. Get 2M takes 432028 (us).
+Under 60M KV pairs. Get 2M takes 388222 (us).
+Under 60M KV pairs. Get 2M takes 357414 (us).
+Under 60M KV pairs. Get 2M takes 356123 (us).
+Under 60M KV pairs. Get 2M takes 373336 (us).
+Under 60M KV pairs. Get 2M takes 355419 (us).
+Under 60M KV pairs. Get 10M takes 1932964 (us).
+Under 60M KV pairs. Get 10M takes 1848309 (us).
+Under 60M KV pairs. Get 10M takes 1822505 (us).
+Under 60M KV pairs, Update 2M takes 456716 (us).
+Under 60M KV pairs, Update 2M takes 418279 (us).
+Under 60M KV pairs, Update 2M takes 418579 (us).
+Under 60M KV pairs, Update 2M takes 430545 (us).
+Under 60M KV pairs, Update 2M takes 433659 (us).
+Under 60M KV pairs. Insert 2M takes 569310 (us).
+Under 62M KV pairs. Insert 2M takes 553452 (us).
+Under 64M KV pairs. Insert 2M takes 546243 (us).
+Under 66M KV pairs. Insert 2M takes 542575 (us).
+Under 68M KV pairs. Insert 2M takes 572527 (us).
+Under 70M KV pairs, Delete 2M takes 344334 (us).
+Under 68M KV pairs, Delete 2M takes 472936 (us).
+Under 66M KV pairs, Delete 2M takes 332380 (us).
+Under 64M KV pairs, Delete 2M takes 848014 (us).
+Under 62M KV pairs, Delete 2M takes 340658 (us).
+Under 60M KV pairs, Delete 2M takes 313701 (us).
+Under 58M KV pairs. Insert 2M takes 812747 (us).
+Under 60M KV pairs. Insert 2M takes 586508 (us).
+
+
+Under 62M KV pairs. Insert 40M takes 11191100 (us).
+Under 102M KV pairs. Get 2M takes 490817 (us).
+Under 102M KV pairs. Get 2M takes 360271 (us).
+Under 102M KV pairs. Get 2M takes 419574 (us).
+Under 102M KV pairs. Get 2M takes 413399 (us).
+Under 102M KV pairs. Get 2M takes 364559 (us).
+Under 102M KV pairs. Get 2M takes 409493 (us).
+Under 102M KV pairs. Get 2M takes 373753 (us).
+Under 102M KV pairs. Get 2M takes 411272 (us).
+Under 102M KV pairs. Get 2M takes 445923 (us).
+Under 102M KV pairs. Get 2M takes 409969 (us).
+Under 102M KV pairs. Get 2M takes 396379 (us).
+Under 102M KV pairs, Update 2M takes 485759 (us).
+Under 102M KV pairs, Update 2M takes 405291 (us).
+Under 102M KV pairs, Update 2M takes 525966 (us).
+Under 102M KV pairs, Update 2M takes 397717 (us).
+Under 102M KV pairs, Update 2M takes 452708 (us).
+Under 102M KV pairs, Update 2M takes 490999 (us).
+Under 102M KV pairs, Update 2M takes 411509 (us).
+Under 102M KV pairs. Insert 2M takes 591886 (us).
+Under 104M KV pairs. Insert 2M takes 576389 (us).
+Under 106M KV pairs. Insert 2M takes 572672 (us).
+Under 108M KV pairs. Insert 2M takes 574220 (us).
+Under 110M KV pairs. Insert 2M takes 576278 (us).
+Under 112M KV pairs. Insert 2M takes 582653 (us).
+Under 114M KV pairs, Delete 2M takes 414209 (us).
+Under 112M KV pairs, Delete 2M takes 503529 (us).
+Under 110M KV pairs, Delete 2M takes 363899 (us).
+Under 108M KV pairs, Delete 2M takes 861248 (us).
+Under 106M KV pairs, Delete 2M takes 331167 (us).
+Under 104M KV pairs, Delete 2M takes 341240 (us).
+Under 102M KV pairs, Delete 2M takes 357593 (us).
+Under 100M KV pairs, Delete 2M takes 393637 (us).
+
+
+Under 98M KV pairs. Insert 50M takes 14929750 (us).
+Under 148M KV pairs. Insert 2M takes 632459 (us).
+Under 150M KV pairs. Get 2M takes 407544 (us).
+Under 150M KV pairs. Get 2M takes 456884 (us).
+Under 150M KV pairs. Get 2M takes 443808 (us).
+Under 150M KV pairs. Get 2M takes 445389 (us).
+Under 150M KV pairs. Get 2M takes 555004 (us).
+Under 150M KV pairs. Get 2M takes 404466 (us).
+Under 150M KV pairs. Get 2M takes 366143 (us).
+Under 150M KV pairs. Get 2M takes 374096 (us).
+Under 150M KV pairs. Get 2M takes 444696 (us).
+Under 150M KV pairs, Update 2M takes 412645 (us).
+Under 150M KV pairs, Update 2M takes 466144 (us).
+Under 150M KV pairs, Update 2M takes 516256 (us).
+Under 150M KV pairs, Update 2M takes 457636 (us).
+Under 150M KV pairs, Update 2M takes 492911 (us).
+Under 150M KV pairs, Update 2M takes 409926 (us).
+Under 150M KV pairs, Update 2M takes 518883 (us).
+Under 150M KV pairs. Insert 2M takes 599126 (us).
+Under 152M KV pairs. Insert 2M takes 599820 (us).
+Under 154M KV pairs. Insert 2M takes 599919 (us).
+Under 156M KV pairs. Insert 2M takes 602335 (us).
+Under 158M KV pairs. Insert 2M takes 603508 (us).
+Under 160M KV pairs. Insert 2M takes 603864 (us).
+Under 162M KV pairs, Delete 2M takes 450827 (us).
+Under 160M KV pairs, Delete 2M takes 562491 (us).
+Under 158M KV pairs, Delete 2M takes 409230 (us).
+Under 156M KV pairs, Delete 2M takes 848423 (us).
+Under 154M KV pairs, Delete 2M takes 418295 (us).
+Under 152M KV pairs, Delete 2M takes 335981 (us).
+Under 150M KV pairs, Delete 2M takes 382365 (us).
+Under 148M KV pairs. Insert 2M takes 851048 (us).
+
+
+Under 150M KV pairs. Insert 50M takes 15388138 (us).
+Under 200M KV pairs. Get 2M takes 484873 (us).
+Under 200M KV pairs. Get 2M takes 467248 (us).
+Under 200M KV pairs. Get 2M takes 399097 (us).
+Under 200M KV pairs. Get 2M takes 508020 (us).
+Under 200M KV pairs. Get 2M takes 430889 (us).
+Under 200M KV pairs. Get 2M takes 493272 (us).
+Under 200M KV pairs. Get 2M takes 409629 (us).
+Under 200M KV pairs. Get 2M takes 473743 (us).
+Under 200M KV pairs. Get 2M takes 406343 (us).
+Under 200M KV pairs. Get 2M takes 485097 (us).
+Under 200M KV pairs, Update 2M takes 497385 (us).
+Under 200M KV pairs, Update 2M takes 441603 (us).
+Under 200M KV pairs, Update 2M takes 634804 (us).
+Under 200M KV pairs, Update 2M takes 395500 (us).
+Under 200M KV pairs, Update 2M takes 738671 (us).
+Under 200M KV pairs, Update 2M takes 458284 (us).
+Under 200M KV pairs, Update 2M takes 496074 (us).
+Under 200M KV pairs. Insert 2M takes 656501 (us).
+Under 202M KV pairs. Insert 2M takes 635248 (us).
+Under 204M KV pairs. Insert 2M takes 632724 (us).
+Under 206M KV pairs. Insert 2M takes 637810 (us).
+Under 208M KV pairs. Insert 2M takes 643243 (us).
+Under 210M KV pairs. Insert 2M takes 640139 (us).
+Under 212M KV pairs, Delete 2M takes 489868 (us).
+Under 210M KV pairs, Delete 2M takes 625610 (us).
+Under 208M KV pairs, Delete 2M takes 473314 (us).
+Under 206M KV pairs, Delete 2M takes 1100237 (us).
+Under 204M KV pairs, Delete 2M takes 392312 (us).
+Under 202M KV pairs, Delete 2M takes 419281 (us).
+Under 200M KV pairs, Delete 2M takes 342794 (us).
+Under 198M KV pairs. Insert 50M takes 16199443 (us).
+Under 248M KV pairs. Get 2M takes 432032 (us).
+Under 248M KV pairs. Get 2M takes 478914 (us).
+Under 248M KV pairs. Get 2M takes 455159 (us).
+Under 248M KV pairs. Get 2M takes 555351 (us).
+Under 248M KV pairs. Get 2M takes 587192 (us).
+Under 248M KV pairs. Get 2M takes 398523 (us).
+Under 248M KV pairs. Get 2M takes 393197 (us).
+Under 248M KV pairs. Get 2M takes 512498 (us).
+Under 248M KV pairs. Get 2M takes 438648 (us).
+Under 248M KV pairs. Get 2M takes 622367 (us).
+Under 248M KV pairs. Get 2M takes 365362 (us).
+Under 248M KV pairs. Get 2M takes 380002 (us).
+Under 248M KV pairs. Get 2M takes 457387 (us).
+Under 248M KV pairs. Get 2M takes 437208 (us).
+Under 248M KV pairs. Get 2M takes 447799 (us).
+Under 248M KV pairs, Update 2M takes 485117 (us).
+Under 248M KV pairs, Update 2M takes 427620 (us).
+Under 248M KV pairs, Update 2M takes 523768 (us).
+Under 248M KV pairs, Update 2M takes 446783 (us).
+Under 248M KV pairs, Update 2M takes 441619 (us).
+Under 248M KV pairs, Update 2M takes 483052 (us).
+Under 248M KV pairs. Insert 2M takes 667295 (us).
+Under 250M KV pairs. Insert 2M takes 659903 (us).
+Under 252M KV pairs. Insert 2M takes 660661 (us).
+Under 254M KV pairs. Insert 2M takes 676128 (us).
+Under 256M KV pairs. Insert 2M takes 663245 (us).
+Under 258M KV pairs. Insert 2M takes 663924 (us).
+Under 260M KV pairs. Insert 2M takes 670930 (us).
+Under 262M KV pairs. Insert 2M takes 670966 (us).
+Under 264M KV pairs, Delete 2M takes 397281 (us).
+Under 262M KV pairs, Delete 2M takes 628300 (us).
+Under 260M KV pairs, Delete 2M takes 432365 (us).
+Under 258M KV pairs, Delete 2M takes 821570 (us).
+Under 256M KV pairs, Delete 2M takes 407158 (us).
+Under 254M KV pairs, Delete 2M takes 425195 (us).
+Under 252M KV pairs, Delete 2M takes 463021 (us).
+Under 250M KV pairs, Delete 2M takes 360281 (us).
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+//  20:57 ~ 21:14  01/16/2019
+////////////////////////////////////////////////////////////////////////////////////////
+Function testHashTable performance.
+Loading data, size = 50M.key Length = 16B
+Loading 10M...
+ Malloc time = 1127623(us).
+ Inert time = 1439737(us).
+conflictCnt = 46481, Max conflict = 2, dupKeyCnt = 0.
+Get perf test 2M, time = 357280.
+Loading 20M...
+ Malloc time = 2249672(us).
+ Inert time = 2905120(us).
+conflictCnt = 186126, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 363405.
+Loading 30M...
+ Malloc time = 3371030(us).
+ Inert time = 4399811(us).
+conflictCnt = 419197, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 365368.
+Loading 40M...
+ Malloc time = 4491109(us).
+ Inert time = 5924588(us).
+conflictCnt = 746051, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 356871.
+Loading 50M...
+ Malloc time = 5610989(us).
+ Inert time = 7477839(us).
+conflictCnt = 1164638, Max conflict = 5, dupKeyCnt = 0.
+Get perf test 2M, time = 363241.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 431031 (us).
+Under 50M KV pairs. Get 2M takes 398779 (us).
+Under 50M KV pairs. Get 2M takes 410383 (us).
+Under 50M KV pairs. Get 2M takes 390194 (us).
+Under 50M KV pairs. Get 2M takes 408036 (us).
+Under 50M KV pairs. Get 2M takes 393812 (us).
+Under 50M KV pairs. Get 2M takes 434667 (us).
+Under 50M KV pairs. Get 2M takes 379512 (us).
+Under 50M KV pairs. Get 2M takes 386546 (us).
+Under 50M KV pairs, Update 2M takes 419091 (us).
+Under 50M KV pairs, Update 2M takes 406119 (us).
+Under 50M KV pairs, Update 2M takes 423963 (us).
+Under 50M KV pairs, Update 2M takes 421572 (us).
+Under 50M KV pairs, Update 2M takes 413897 (us).
+Under 50M KV pairs, Update 2M takes 424954 (us).
+Under 50M KV pairs, Update 2M takes 424407 (us).
+Under 50M KV pairs. Insert 2M takes 538689 (us).
+Under 52M KV pairs. Insert 2M takes 538657 (us).
+Under 54M KV pairs. Insert 2M takes 570039 (us).
+Under 56M KV pairs. Insert 2M takes 560250 (us).
+Under 58M KV pairs. Insert 2M takes 553721 (us).
+Under 60M KV pairs, Delete 2M takes 389144 (us).
+Under 58M KV pairs, Delete 2M takes 560644 (us).
+Under 56M KV pairs, Delete 2M takes 367877 (us).
+Under 54M KV pairs, Delete 2M takes 780250 (us).
+Under 52M KV pairs, Delete 2M takes 366998 (us).
+
+Under 50M KV pairs. Insert 50M takes 14307751 (us).
+Under 100M KV pairs. Get 2M takes 470794 (us).
+Under 100M KV pairs. Get 2M takes 395812 (us).
+Under 100M KV pairs. Get 2M takes 435223 (us).
+Under 100M KV pairs. Get 2M takes 422921 (us).
+Under 100M KV pairs. Get 2M takes 414738 (us).
+Under 100M KV pairs. Get 2M takes 401568 (us).
+Under 100M KV pairs. Get 2M takes 418341 (us).
+Under 100M KV pairs. Get 2M takes 393864 (us).
+Under 100M KV pairs. Get 2M takes 392338 (us).
+Under 100M KV pairs. Get 2M takes 420638 (us).
+Under 100M KV pairs. Get 2M takes 398189 (us).
+Under 100M KV pairs, Update 2M takes 416011 (us).
+Under 100M KV pairs, Update 2M takes 425461 (us).
+Under 100M KV pairs, Update 2M takes 420661 (us).
+Under 100M KV pairs, Update 2M takes 416955 (us).
+Under 100M KV pairs, Update 2M takes 462587 (us).
+Under 100M KV pairs. Insert 2M takes 586103 (us).
+Under 102M KV pairs. Insert 2M takes 607518 (us).
+Under 104M KV pairs. Insert 2M takes 580708 (us).
+Under 106M KV pairs. Insert 2M takes 578945 (us).
+Under 108M KV pairs. Insert 2M takes 584415 (us).
+Under 110M KV pairs, Delete 2M takes 438716 (us).
+Under 108M KV pairs, Delete 2M takes 481140 (us).
+Under 106M KV pairs, Delete 2M takes 379469 (us).
+Under 104M KV pairs, Delete 2M takes 831601 (us).
+Under 102M KV pairs, Delete 2M takes 373795 (us).
+Under 100M KV pairs, Delete 2M takes 367082 (us).
+
+Under 98M KV pairs. Insert 50M takes 14706987 (us).
+Under 148M KV pairs. Get 2M takes 454464 (us).
+Under 148M KV pairs. Get 2M takes 453776 (us).
+Under 148M KV pairs. Get 2M takes 460029 (us).
+Under 148M KV pairs, Update 2M takes 487955 (us).
+Under 148M KV pairs, Update 2M takes 470528 (us).
+Under 148M KV pairs, Update 2M takes 518554 (us).
+Under 148M KV pairs, Update 2M takes 541905 (us).
+Under 148M KV pairs, Update 2M takes 421928 (us).
+Under 148M KV pairs, Update 2M takes 479032 (us).
+Under 148M KV pairs. Insert 2M takes 625834 (us).
+Under 150M KV pairs. Insert 2M takes 608224 (us).
+Under 152M KV pairs. Insert 2M takes 631051 (us).
+Under 154M KV pairs. Insert 2M takes 625319 (us).
+Under 156M KV pairs. Insert 2M takes 622177 (us).
+Under 158M KV pairs. Insert 2M takes 610072 (us).
+Under 160M KV pairs, Delete 2M takes 361643 (us).
+Under 158M KV pairs, Delete 2M takes 582760 (us).
+Under 156M KV pairs, Delete 2M takes 370748 (us).
+Under 154M KV pairs, Delete 2M takes 800594 (us).
+Under 152M KV pairs, Delete 2M takes 380099 (us).
+
+Under 150M KV pairs. Insert 50M takes 15496854 (us).
+Under 200M KV pairs. Get 2M takes 473880 (us).
+Under 200M KV pairs. Get 2M takes 401707 (us).
+Under 200M KV pairs. Get 2M takes 385677 (us).
+Under 200M KV pairs. Get 2M takes 603764 (us).
+Under 200M KV pairs. Get 2M takes 432282 (us).
+Under 200M KV pairs. Get 2M takes 463811 (us).
+Under 200M KV pairs. Get 2M takes 688987 (us).
+Under 200M KV pairs. Get 2M takes 505304 (us).
+Under 200M KV pairs. Get 2M takes 424512 (us).
+Under 200M KV pairs. Get 2M takes 404423 (us).
+Under 200M KV pairs. Get 2M takes 409009 (us).
+Under 200M KV pairs, Update 2M takes 454142 (us).
+Under 200M KV pairs, Update 2M takes 464707 (us).
+Under 200M KV pairs, Update 2M takes 540012 (us).
+Under 200M KV pairs, Update 2M takes 526487 (us).
+Under 200M KV pairs, Update 2M takes 442202 (us).
+Under 200M KV pairs, Update 2M takes 541234 (us).
+Under 200M KV pairs, Update 2M takes 435990 (us).
+Under 200M KV pairs. Insert 2M takes 657009 (us).
+Under 202M KV pairs. Insert 2M takes 642985 (us).
+Under 204M KV pairs. Insert 2M takes 638028 (us).
+Under 206M KV pairs. Insert 2M takes 644702 (us).
+Under 208M KV pairs. Insert 2M takes 680172 (us).
+Under 210M KV pairs, Delete 2M takes 416009 (us).
+Under 208M KV pairs, Delete 2M takes 613472 (us).
+Under 206M KV pairs, Delete 2M takes 338711 (us).
+Under 204M KV pairs, Delete 2M takes 927565 (us).
+Under 202M KV pairs, Delete 2M takes 346615 (us).
+Under 200M KV pairs, Delete 2M takes 426608 (us).
+Under 198M KV pairs. Insert 2M takes 952447 (us).
+
+Under 200M KV pairs. Insert 50M takes 16204116 (us).
+Under 250M KV pairs. Get 2M takes 501166 (us).
+Under 250M KV pairs. Get 2M takes 455603 (us).
+Under 250M KV pairs. Get 2M takes 514082 (us).
+Under 250M KV pairs. Get 2M takes 366743 (us).
+Under 250M KV pairs. Get 2M takes 382403 (us).
+Under 250M KV pairs. Get 2M takes 583678 (us).
+Under 250M KV pairs. Get 2M takes 476030 (us).
+Under 250M KV pairs. Get 2M takes 476516 (us).
+Under 250M KV pairs. Get 2M takes 436159 (us).
+Under 250M KV pairs. Get 2M takes 425388 (us).
+Under 250M KV pairs, Update 2M takes 489961 (us).
+Under 250M KV pairs, Update 2M takes 523696 (us).
+Under 250M KV pairs, Update 2M takes 566289 (us).
+Under 250M KV pairs, Update 2M takes 500899 (us).
+Under 250M KV pairs, Update 2M takes 456207 (us).
+Under 250M KV pairs, Update 2M takes 422785 (us).
+Under 250M KV pairs, Update 2M takes 564418 (us).
+Under 250M KV pairs. Insert 2M takes 663559 (us).
+Under 252M KV pairs. Insert 2M takes 663587 (us).
+Under 254M KV pairs. Insert 2M takes 664315 (us).
+Under 256M KV pairs. Insert 2M takes 665212 (us).
+Under 258M KV pairs. Insert 2M takes 667543 (us).
+Under 260M KV pairs, Delete 2M takes 373216 (us).
+Under 258M KV pairs, Delete 2M takes 648768 (us).
+Under 256M KV pairs, Delete 2M takes 396299 (us).
+Under 254M KV pairs, Delete 23M takes 7175763 (us). // junk operations
+Under 231M KV pairs. Get 3M takes 3201590 (us).
+Under 231M KV pairs. Get 5M takes 1152605 (us).
+
+
+
+Function testHashTable performance.
+Loading data, size = 50M.key Length = 40B
+Loading 10M...
+ Malloc time = 1188037(us).
+ Inert time = 1472846(us).
+conflictCnt = 46622, Max conflict = 2, dupKeyCnt = 0.
+Get perf test 2M, time = 373923.
+Loading 20M...
+ Malloc time = 2398185(us).
+ Inert time = 2947921(us).
+conflictCnt = 186120, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 380360.
+Loading 30M...
+ Malloc time = 3607361(us).
+ Inert time = 4452242(us).
+conflictCnt = 418828, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 370555.
+Loading 40M...
+ Malloc time = 4815795(us).
+ Inert time = 5991611(us).
+conflictCnt = 745309, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 374324.
+Loading 50M...
+ Malloc time = 5997089(us).
+ Inert time = 7557936(us).
+conflictCnt = 1164939, Max conflict = 4, dupKeyCnt = 0.
+Get perf test 2M, time = 384863.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 436442 (us).
+Under 50M KV pairs. Get 2M takes 393631 (us).
+Under 50M KV pairs. Get 2M takes 370338 (us).
+Under 50M KV pairs. Get 2M takes 387818 (us).
+Under 50M KV pairs. Get 2M takes 409906 (us).
+Under 50M KV pairs. Get 2M takes 399945 (us).
+Under 50M KV pairs. Get 2M takes 384390 (us).
+Under 50M KV pairs. Get 2M takes 385209 (us).
+Under 50M KV pairs. Get 2M takes 376054 (us).
+Under 50M KV pairs. Get 2M takes 418748 (us).
+Under 50M KV pairs. Get 2M takes 402515 (us).
+Under 50M KV pairs. Get 2M takes 406630 (us).
+Under 50M KV pairs, Update 2M takes 445500 (us).
+Under 50M KV pairs, Update 2M takes 428123 (us).
+Under 50M KV pairs, Update 2M takes 457265 (us).
+Under 50M KV pairs, Update 2M takes 466398 (us).
+Under 50M KV pairs, Update 2M takes 436585 (us).
+Under 50M KV pairs, Update 2M takes 458655 (us).
+Under 50M KV pairs. Insert 2M takes 568510 (us).
+Under 52M KV pairs. Insert 2M takes 561560 (us).
+Under 54M KV pairs. Insert 2M takes 574604 (us).
+Under 56M KV pairs. Insert 2M takes 565790 (us).
+Under 58M KV pairs. Insert 2M takes 564780 (us).
+Under 60M KV pairs. Insert 2M takes 596256 (us).
+Under 62M KV pairs, Delete 2M takes 370093 (us).
+Under 60M KV pairs, Delete 2M takes 577059 (us).
+Under 58M KV pairs, Delete 2M takes 422476 (us).
+Under 56M KV pairs, Delete 2M takes 906785 (us).
+Under 54M KV pairs, Delete 2M takes 353040 (us).
+Under 52M KV pairs, Delete 2M takes 376652 (us).
+
+
+Function testHashTable performance.
+Loading data, size = 50M.key Length = 64B
+Loading 10M...
+ Malloc time = 1284441(us).
+ Inert time = 1620435(us).
+conflictCnt = 46405, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 397311.
+Loading 20M...
+ Malloc time = 2561814(us).
+ Inert time = 3274900(us).
+conflictCnt = 186046, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 398099.
+Loading 30M...
+ Malloc time = 3837350(us).
+ Inert time = 4964658(us).
+conflictCnt = 419057, Max conflict = 3, dupKeyCnt = 0.
+Get perf test 2M, time = 413575.
+Loading 40M...
+ Malloc time = 5110926(us).
+ Inert time = 6690091(us).
+conflictCnt = 744875, Max conflict = 4, dupKeyCnt = 0.
+Get perf test 2M, time = 404608.
+Loading 50M...
+ Malloc time = 6384183(us).
+ Inert time = 8451838(us).
+conflictCnt = 1163507, Max conflict = 4, dupKeyCnt = 0.
+Get perf test 2M, time = 418619.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 473805 (us).
+Under 50M KV pairs. Get 2M takes 414129 (us).
+Under 50M KV pairs. Get 2M takes 449034 (us).
+Under 50M KV pairs. Get 2M takes 427302 (us).
+Under 50M KV pairs. Get 2M takes 418626 (us).
+Under 50M KV pairs. Get 2M takes 447598 (us).
+Under 50M KV pairs. Get 2M takes 442866 (us).
+Under 50M KV pairs. Get 2M takes 435748 (us).
+Under 50M KV pairs, Update 2M takes 555086 (us).
+Under 50M KV pairs, Update 2M takes 526944 (us).
+Under 50M KV pairs, Update 2M takes 511829 (us).
+Under 50M KV pairs, Update 2M takes 517964 (us).
+Under 50M KV pairs, Update 2M takes 535559 (us).
+Under 50M KV pairs. Insert 2M takes 625949 (us).
+Under 52M KV pairs. Insert 2M takes 621781 (us).
+Under 54M KV pairs. Insert 2M takes 629074 (us).
+Under 56M KV pairs. Insert 2M takes 630296 (us).
+Under 58M KV pairs. Insert 2M takes 623510 (us).
+Under 60M KV pairs, Delete 2M takes 402008 (us).
+Under 58M KV pairs, Delete 2M takes 663838 (us).
+Under 56M KV pairs, Delete 2M takes 418274 (us).
+Under 54M KV pairs, Delete 2M takes 402241 (us).
+Under 52M KV pairs, Delete 2M takes 1347479 (us).
+Under 50M KV pairs, Delete 2M takes 383255 (us).

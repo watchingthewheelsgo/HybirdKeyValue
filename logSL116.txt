@@ -1,0 +1,38 @@
+Function testSkipList performance.
+Loading data, size = 50M.key Length = 16B
+Loading 10M...
+ Malloc time = 1257332(us).
+ Inert time = 27979706(us).
+Get perf test 2M, time = 6657159.
+Loading 20M...
+ Malloc time = 2495767(us).
+ Inert time = 67379137(us).
+Get perf test 2M, time = 7935595.
+Loading 30M...
+ Malloc time = 3734816(us).
+ Inert time = 111383257(us).
+Get perf test 2M, time = 8602234.
+Loading 40M...
+ Malloc time = 4974944(us).
+ Inert time = 158589557(us).
+Get perf test 2M, time = 9101465.
+Loading 50M...
+ Malloc time = 6214192(us).
+ Inert time = 208171998(us).
+Get perf test 2M, time = 9605461.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 9647261 (us).
+Under 50M KV pairs. Get 2M takes 9568187 (us).
+Under 50M KV pairs, Update 2M takes 9722668 (us).
+Under 50M KV pairs, Update 2M takes 9694685 (us).
+Under 50M KV pairs. Insert 2M takes 10272781 (us).
+Under 52M KV pairs. Insert 2M takes 10322233 (us).
+Under 54M KV pairs, Delete 2M takes 9884407 (us).
+Under 52M KV pairs, Delete 2M takes 9819715 (us).
+Under 50M KV pairs, Scan 1M takes 8109769 (us).
+Under 50M KV pairs. Insert 1M takes 5625476 (us).
+Under 51M KV pairs. Get 1M takes 4795150 (us).
+Under 51M KV pairs, Scan 1M takes 7902570 (us).
+Function testSkipList performance.
+Loading data, size = 0M.key Length = 16B
+Loading 0M KV pair finished.

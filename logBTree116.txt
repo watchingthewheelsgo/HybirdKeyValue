@@ -1,0 +1,481 @@
+// Record at 22:10 01/16/2019
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 50M.key Length = 16B
+Loading 10M...
+ Malloc time = 1460980(us).
+ Inert time = 4532584(us).
+Get perf test 2M, time = 896500.
+Loading 20M...
+ Malloc time = 2901406(us).
+ Inert time = 10244192(us).
+Get perf test 2M, time = 1010884.
+Loading 30M...
+ Malloc time = 4342288(us).
+ Inert time = 16419618(us).
+Get perf test 2M, time = 1098856.
+Loading 40M...
+ Malloc time = 5782715(us).
+ Inert time = 22951422(us).
+Get perf test 2M, time = 1158799.
+Loading 50M...
+ Malloc time = 7224694(us).
+ Inert time = 29712573(us).
+Get perf test 2M, time = 1196421.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 1265506 (us).
+Under 50M KV pairs. Get 2M takes 1261559 (us).
+Under 50M KV pairs. Get 2M takes 1173071 (us).
+Under 50M KV pairs. Get 2M takes 1185098 (us).
+Under 50M KV pairs. Get 2M takes 1173844 (us).
+Under 50M KV pairs. Get 2M takes 1174526 (us).
+Under 50M KV pairs. Get 2M takes 1186575 (us).
+Under 50M KV pairs, Update 2M takes 1626342 (us).
+Under 50M KV pairs, Update 2M takes 1620094 (us).
+Under 50M KV pairs, Update 2M takes 1618959 (us).
+Under 50M KV pairs, Scan 1M takes 2154257 (us).
+Under 50M KV pairs, Scan 1M takes 2153750 (us).
+Under 50M KV pairs, Scan 1M takes 2162117 (us).
+Under 50M KV pairs. Insert 2M takes 1704097 (us).
+Under 52M KV pairs. Insert 2M takes 1691807 (us).
+Under 54M KV pairs. Insert 2M takes 1698624 (us).
+Under 56M KV pairs. Insert 2M takes 1696688 (us).
+Under 58M KV pairs. Insert 2M takes 1705139 (us).
+Under 60M KV pairs, Delete 2M takes 1250339 (us).
+Under 58M KV pairs, Delete 2M takes 1299521 (us).
+Under 56M KV pairs, Delete 2M takes 1221629 (us).
+Under 54M KV pairs, Delete 2M takes 1226730 (us).
+Under 52M KV pairs, Delete 2M takes 1243834 (us).
+
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 100M.key Length = 16B
+Loading 10M...
+ Malloc time = 1482184(us).
+ Inert time = 4531401(us).
+Get perf test 2M, time = 892545.
+Loading 20M...
+ Malloc time = 2951603(us).
+ Inert time = 10255139(us).
+Get perf test 2M, time = 1010942.
+Loading 30M...
+ Malloc time = 4421720(us).
+ Inert time = 16438290(us).
+Get perf test 2M, time = 1098865.
+Loading 40M...
+ Malloc time = 5891201(us).
+ Inert time = 22972595(us).
+Get perf test 2M, time = 1160558.
+Loading 50M...
+ Malloc time = 7362366(us).
+ Inert time = 29743842(us).
+Get perf test 2M, time = 1194971.
+Loading 60M...
+ Malloc time = 8835388(us).
+ Inert time = 36691279(us).
+Get perf test 2M, time = 1236214.
+Loading 70M...
+ Malloc time = 10308672(us).
+ Inert time = 43834626(us).
+Get perf test 2M, time = 1267466.
+Loading 80M...
+ Malloc time = 11784388(us).
+ Inert time = 51153762(us).
+Get perf test 2M, time = 1302465.
+Loading 90M...
+ Malloc time = 13256233(us).
+ Inert time = 58595383(us).
+Get perf test 2M, time = 1328212.
+Loading 100M...
+ Malloc time = 14729656(us).
+ Inert time = 66158542(us).
+Get perf test 2M, time = 1340914.
+Loading 100M KV pair finished.
+Under 100M KV pairs. Get 2M takes 1389135 (us).
+Under 100M KV pairs. Get 2M takes 1376819 (us).
+Under 100M KV pairs. Get 2M takes 1433608 (us).
+Under 100M KV pairs. Get 2M takes 1368246 (us).
+Under 100M KV pairs, Update 2M takes 1843252 (us).
+Under 100M KV pairs, Update 2M takes 1829716 (us).
+Under 100M KV pairs, Update 2M takes 1845970 (us).
+Under 100M KV pairs, Scan 1M takes 2345015 (us).
+Under 100M KV pairs, Scan 1M takes 2262825 (us).
+Under 100M KV pairs, Scan 1M takes 2259439 (us).
+Under 100M KV pairs. Insert 2M takes 1835702 (us).
+Under 102M KV pairs. Insert 2M takes 1834159 (us).
+Under 104M KV pairs. Insert 2M takes 1841402 (us).
+Under 106M KV pairs. Insert 2M takes 1844764 (us).
+Under 108M KV pairs. Insert 2M takes 1849330 (us).
+Under 110M KV pairs, Delete 2M takes 1369751 (us).
+Under 108M KV pairs, Delete 2M takes 1381072 (us).
+Under 106M KV pairs, Delete 2M takes 1358011 (us).
+Under 104M KV pairs, Delete 2M takes 1352363 (us).
+Under 102M KV pairs, Delete 2M takes 1350027 (us).
+Under 100M KV pairs. Get 2M takes 1390068 (us).
+Under 100M KV pairs, Delete 2M takes 1428855 (us).
+
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 150M.key Length = 16B
+Loading 10M...
+ Malloc time = 1460375(us).
+ Inert time = 4533643(us).
+Get perf test 2M, time = 895561.
+Loading 20M...
+ Malloc time = 2900107(us).
+ Inert time = 10262656(us).
+Get perf test 2M, time = 1010759.
+Loading 30M...
+ Malloc time = 4341659(us).
+ Inert time = 16439792(us).
+Get perf test 2M, time = 1096307.
+Loading 40M...
+ Malloc time = 5783027(us).
+ Inert time = 22977253(us).
+Get perf test 2M, time = 1156288.
+Loading 50M...
+ Malloc time = 7225961(us).
+ Inert time = 29735476(us).
+Get perf test 2M, time = 1191909.
+Loading 60M...
+ Malloc time = 8669264(us).
+ Inert time = 36667183(us).
+Get perf test 2M, time = 1235022.
+Loading 70M...
+ Malloc time = 10113123(us).
+ Inert time = 43807085(us).
+Get perf test 2M, time = 1261801.
+Loading 80M...
+ Malloc time = 11559922(us).
+ Inert time = 51106329(us).
+Get perf test 2M, time = 1298435.
+Loading 90M...
+ Malloc time = 13005328(us).
+ Inert time = 58528026(us).
+Get perf test 2M, time = 1326407.
+Loading 100M...
+ Malloc time = 14449921(us).
+ Inert time = 66099596(us).
+Get perf test 2M, time = 1339312.
+Loading 150M KV pair finished.
+Under 150M KV pairs. Get 2M takes 1519955 (us).
+Under 150M KV pairs. Get 2M takes 1414271 (us).
+Under 150M KV pairs. Get 2M takes 1472775 (us).
+Under 150M KV pairs. Get 2M takes 1429249 (us).
+Under 150M KV pairs. Get 2M takes 1438202 (us).
+Under 150M KV pairs. Get 2M takes 1463058 (us).
+Under 150M KV pairs. Get 2M takes 1420491 (us).
+Under 150M KV pairs, Update 2M takes 1879635 (us).
+Under 150M KV pairs, Update 2M takes 1874472 (us).
+Under 150M KV pairs, Update 2M takes 1860351 (us).
+Under 150M KV pairs, Update 2M takes 1864941 (us).
+Under 150M KV pairs, Scan 1M takes 2426050 (us).
+Under 150M KV pairs, Scan 1M takes 2382754 (us).
+Under 150M KV pairs, Scan 1M takes 2422153 (us).
+Under 150M KV pairs, Scan 1M takes 2354722 (us).
+Under 150M KV pairs, Scan 1M takes 2416830 (us).
+Under 150M KV pairs. Insert 2M takes 1932703 (us).
+Under 152M KV pairs. Insert 2M takes 1965226 (us).
+Under 154M KV pairs. Insert 2M takes 1916768 (us).
+Under 156M KV pairs. Insert 2M takes 1923833 (us).
+Under 158M KV pairs. Insert 2M takes 1923675 (us).
+Under 160M KV pairs, Delete 2M takes 1449332 (us).
+Under 158M KV pairs, Delete 2M takes 1442135 (us).
+Under 156M KV pairs, Delete 2M takes 1428837 (us).
+Under 154M KV pairs, Delete 2M takes 1420528 (us).
+Under 152M KV pairs, Delete 2M takes 1505481 (us).
+
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 200M.key Length = 16B
+Loading 10M...
+ Malloc time = 1465937(us).
+ Inert time = 4514767(us).
+Get perf test 2M, time = 894110.
+Loading 20M...
+ Malloc time = 2912817(us).
+ Inert time = 10214665(us).
+Get perf test 2M, time = 1006807.
+Loading 30M...
+ Malloc time = 4360972(us).
+ Inert time = 16368075(us).
+Get perf test 2M, time = 1095048.
+Loading 40M...
+ Malloc time = 5809909(us).
+ Inert time = 22899938(us).
+Get perf test 2M, time = 1157432.
+Loading 50M...
+ Malloc time = 7260417(us).
+ Inert time = 29656169(us).
+Get perf test 2M, time = 1195674.
+Loading 60M...
+ Malloc time = 8710099(us).
+ Inert time = 36584337(us).
+Get perf test 2M, time = 1234223.
+Loading 70M...
+ Malloc time = 10159129(us).
+ Inert time = 43715643(us).
+Get perf test 2M, time = 1267560.
+Loading 80M...
+ Malloc time = 11610928(us).
+ Inert time = 51009302(us).
+Get perf test 2M, time = 1300966.
+Loading 90M...
+ Malloc time = 13060990(us).
+ Inert time = 58427697(us).
+Get perf test 2M, time = 1326141.
+Loading 100M...
+ Malloc time = 14510642(us).
+ Inert time = 65967967(us).
+Get perf test 2M, time = 1339960.
+Loading 200M KV pair finished.
+Under 200M KV pairs. Get 2M takes 1498022 (us).
+Under 200M KV pairs. Get 2M takes 1452613 (us).
+Under 200M KV pairs. Get 2M takes 1475507 (us).
+Under 200M KV pairs, Update 2M takes 1949493 (us).
+Under 200M KV pairs, Update 2M takes 1930865 (us).
+Under 200M KV pairs, Update 2M takes 1930137 (us).
+Under 200M KV pairs, Scan 1M takes 2409779 (us).
+Under 200M KV pairs, Scan 1M takes 2357069 (us).
+Under 200M KV pairs, Scan 1M takes 2345636 (us).
+Under 200M KV pairs, Scan 1M takes 2361359 (us).
+Under 200M KV pairs, Scan 1M takes 2338881 (us).
+Under 200M KV pairs, Scan 1M takes 2347440 (us).
+Under 200M KV pairs, Scan 1M takes 2361141 (us).
+Under 200M KV pairs. Insert 2M takes 1990418 (us).
+Under 202M KV pairs. Insert 2M takes 1959059 (us).
+Under 204M KV pairs. Insert 2M takes 1969535 (us).
+Under 206M KV pairs. Insert 2M takes 1985301 (us).
+Under 208M KV pairs. Insert 2M takes 1985807 (us).
+Under 210M KV pairs, Delete 2M takes 1559426 (us).
+Under 208M KV pairs, Delete 2M takes 1491186 (us).
+Under 206M KV pairs, Delete 2M takes 1485160 (us).
+Under 204M KV pairs, Delete 2M takes 1483498 (us).
+Under 202M KV pairs, Delete 2M takes 1504439 (us).
+
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 250M.key Length = 16B
+Loading 10M...
+ Malloc time = 1461966(us).
+ Inert time = 4516922(us).
+Get perf test 2M, time = 896091.
+Loading 20M...
+ Malloc time = 2905527(us).
+ Inert time = 10219233(us).
+Get perf test 2M, time = 1009068.
+Loading 30M...
+ Malloc time = 4350635(us).
+ Inert time = 16380173(us).
+Get perf test 2M, time = 1095284.
+Loading 40M...
+ Malloc time = 5792945(us).
+ Inert time = 22899209(us).
+Get perf test 2M, time = 1159999.
+Loading 50M...
+ Malloc time = 7237824(us).
+ Inert time = 29657057(us).
+Get perf test 2M, time = 1194648.
+Loading 60M...
+ Malloc time = 8683848(us).
+ Inert time = 36582291(us).
+Get perf test 2M, time = 1232647.
+Loading 70M...
+ Malloc time = 10130723(us).
+ Inert time = 43675820(us).
+Get perf test 2M, time = 1246437.
+Loading 80M...
+ Malloc time = 11586720(us).
+ Inert time = 50848371(us).
+Get perf test 2M, time = 1268186.
+Loading 90M...
+ Malloc time = 13036397(us).
+ Inert time = 58078380(us).
+Get perf test 2M, time = 1288152.
+Loading 100M...
+ Malloc time = 14484735(us).
+ Inert time = 65426784(us).
+Get perf test 2M, time = 1299268.
+Loading 250M KV pair finished.
+Under 250M KV pairs. Get 2M takes 1552243 (us).
+Under 250M KV pairs. Get 2M takes 1478058 (us).
+Under 250M KV pairs. Get 2M takes 1486942 (us).
+Under 250M KV pairs. Get 2M takes 1456704 (us).
+Under 250M KV pairs. Get 2M takes 1515665 (us).
+Under 250M KV pairs. Get 2M takes 1464217 (us).
+Under 250M KV pairs, Update 2M takes 1892872 (us).
+Under 250M KV pairs, Update 2M takes 1939918 (us).
+Under 250M KV pairs, Update 2M takes 1919808 (us).
+Under 250M KV pairs, Update 2M takes 1949889 (us).
+Under 250M KV pairs, Update 2M takes 1941453 (us).
+Under 250M KV pairs, Scan 1M takes 2342543 (us).
+Under 250M KV pairs, Scan 1M takes 2331348 (us).
+Under 250M KV pairs, Scan 1M takes 2337366 (us).
+Under 250M KV pairs, Scan 1M takes 2336177 (us).
+Under 250M KV pairs. Insert 2M takes 1912961 (us).
+Under 252M KV pairs. Insert 2M takes 1939699 (us).
+Under 254M KV pairs. Insert 2M takes 1933527 (us).
+Under 256M KV pairs. Insert 2M takes 1973406 (us).
+Under 258M KV pairs. Insert 2M takes 1944816 (us).
+Under 260M KV pairs, Delete 2M takes 1486442 (us).
+Under 258M KV pairs, Delete 2M takes 1455203 (us).
+Under 256M KV pairs, Delete 2M takes 1446297 (us).
+Under 254M KV pairs, Delete 2M takes 1453592 (us).
+Under 252M KV pairs, Delete 2M takes 1442411 (us).
+Under 250M KV pairs. Insert 1M takes 2205860 (us).
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+///
+///		Testing performace under different keySize = 16, 40 ,64
+///
+/////////////////////////////////////////////////////////////////////////////
+
+// keySize=16B
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 50M.key Length = 16B
+Loading 10M...
+ Malloc time = 1460980(us).
+ Inert time = 4532584(us).
+Get perf test 2M, time = 896500.
+Loading 20M...
+ Malloc time = 2901406(us).
+ Inert time = 10244192(us).
+Get perf test 2M, time = 1010884.
+Loading 30M...
+ Malloc time = 4342288(us).
+ Inert time = 16419618(us).
+Get perf test 2M, time = 1098856.
+Loading 40M...
+ Malloc time = 5782715(us).
+ Inert time = 22951422(us).
+Get perf test 2M, time = 1158799.
+Loading 50M...
+ Malloc time = 7224694(us).
+ Inert time = 29712573(us).
+Get perf test 2M, time = 1196421.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 1265506 (us).
+Under 50M KV pairs. Get 2M takes 1261559 (us).
+Under 50M KV pairs. Get 2M takes 1173071 (us).
+Under 50M KV pairs. Get 2M takes 1185098 (us).
+Under 50M KV pairs. Get 2M takes 1173844 (us).
+Under 50M KV pairs. Get 2M takes 1174526 (us).
+Under 50M KV pairs. Get 2M takes 1186575 (us).
+Under 50M KV pairs, Update 2M takes 1626342 (us).
+Under 50M KV pairs, Update 2M takes 1620094 (us).
+Under 50M KV pairs, Update 2M takes 1618959 (us).
+Under 50M KV pairs, Scan 1M takes 2154257 (us).
+Under 50M KV pairs, Scan 1M takes 2153750 (us).
+Under 50M KV pairs, Scan 1M takes 2162117 (us).
+Under 50M KV pairs. Insert 2M takes 1704097 (us).
+Under 52M KV pairs. Insert 2M takes 1691807 (us).
+Under 54M KV pairs. Insert 2M takes 1698624 (us).
+Under 56M KV pairs. Insert 2M takes 1696688 (us).
+Under 58M KV pairs. Insert 2M takes 1705139 (us).
+Under 60M KV pairs, Delete 2M takes 1250339 (us).
+Under 58M KV pairs, Delete 2M takes 1299521 (us).
+Under 56M KV pairs, Delete 2M takes 1221629 (us).
+Under 54M KV pairs, Delete 2M takes 1226730 (us).
+Under 52M KV pairs, Delete 2M takes 1243834 (us).
+
+// keySize=40B
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 50M.key Length = 40B
+Loading 10M...
+ Malloc time = 1545856(us).
+ Inert time = 4621662(us).
+Get perf test 2M, time = 890397.
+Loading 20M...
+ Malloc time = 3071872(us).
+ Inert time = 10369337(us).
+Get perf test 2M, time = 1001281.
+Loading 30M...
+ Malloc time = 4598413(us).
+ Inert time = 16750723(us).
+Get perf test 2M, time = 1127541.
+Loading 40M...
+ Malloc time = 6126146(us).
+ Inert time = 23403464(us).
+Get perf test 2M, time = 1173666.
+Loading 50M...
+ Malloc time = 7655551(us).
+ Inert time = 30213056(us).
+Get perf test 2M, time = 1190831.
+Loading 50M KV pair finished.
+Under 50M KV pairs. Get 2M takes 1207800 (us).
+Under 50M KV pairs. Get 2M takes 1216929 (us).
+Under 50M KV pairs. Get 2M takes 1211925 (us).
+Under 50M KV pairs. Get 2M takes 1197306 (us).
+Under 50M KV pairs, Update 2M takes 1705291 (us).
+Under 50M KV pairs, Update 2M takes 1714277 (us).
+Under 50M KV pairs, Update 2M takes 1704211 (us).
+Under 50M KV pairs, Update 2M takes 1708557 (us).
+Under 50M KV pairs, Update 2M takes 1719062 (us).
+Under 50M KV pairs. Insert 2M takes 1744164 (us).
+Under 52M KV pairs. Insert 2M takes 1749995 (us).
+Under 54M KV pairs. Insert 2M takes 1780380 (us).
+Under 56M KV pairs. Insert 2M takes 1752918 (us).
+Under 58M KV pairs. Insert 2M takes 1796769 (us).
+Under 60M KV pairs, Delete 2M takes 1360952 (us).
+Under 58M KV pairs, Delete 2M takes 1263347 (us).
+Under 56M KV pairs, Delete 2M takes 1354522 (us).
+Under 54M KV pairs, Delete 2M takes 1255207 (us).
+Under 52M KV pairs, Delete 2M takes 1329304 (us).
+Under 50M KV pairs, Scan 1M takes 2924880 (us).
+Under 50M KV pairs, Scan 1M takes 2459954 (us).
+Under 50M KV pairs, Scan 1M takes 2496612 (us).
+Under 50M KV pairs, Scan 1M takes 2389251 (us).
+Under 50M KV pairs, Scan 1M takes 2396881 (us).
+Under 50M KV pairs. Get 2M takes 1253446 (us).
+Under 50M KV pairs, Scan 1M takes 2399979 (us).
+
+
+// keySize=64B
+
+Function testBplusTreeList performance.(List version).
+Loading data, size = 50M.key Length = 64B
+Loading 10M...
+ Malloc time = 1599708(us).
+ Inert time = 4152666(us).
+Get perf test 2M, time = 842148.
+Loading 20M...
+ Malloc time = 3179643(us).
+ Inert time = 9219275(us).
+Get perf test 2M, time = 942519.
+Loading 30M...
+ Malloc time = 4761696(us).
+ Inert time = 14667849(us).
+Get perf test 2M, time = 985736.
+Loading 40M...
+ Malloc time = 6345034(us).
+ Inert time = 20302396(us).
+Get perf test 2M, time = 1033654.
+Loading 50M...
+ Malloc time = 7928173(us).
+ Inert time = 26179142(us).
+Get perf test 2M, time = 1068374.
+Loading 50M KV pair finished.
+
+Under 50M KV pairs. Get 2M takes 1080960 (us).
+Under 50M KV pairs. Get 2M takes 1066341 (us).
+Under 50M KV pairs. Get 2M takes 1075772 (us).
+Under 50M KV pairs. Get 2M takes 1075136 (us).
+Under 50M KV pairs, Update 2M takes 1517542 (us).
+Under 50M KV pairs, Update 2M takes 1505121 (us).
+Under 50M KV pairs, Update 2M takes 1502832 (us).
+Under 50M KV pairs. Insert 2M takes 1525830 (us).
+Under 52M KV pairs. Insert 2M takes 1533474 (us).
+Under 54M KV pairs. Insert 2M takes 1543932 (us).
+Under 56M KV pairs. Insert 2M takes 1549734 (us).
+Under 58M KV pairs, Delete 2M takes 1101048 (us).
+Under 56M KV pairs, Delete 2M takes 1093386 (us).
+Under 54M KV pairs, Delete 2M takes 1080841 (us).
+Under 52M KV pairs, Delete 2M takes 1070983 (us).
+Under 50M KV pairs, Scan 1M takes 1809311 (us).
+Under 50M KV pairs, Scan 1M takes 1730953 (us).
+Under 50M KV pairs, Scan 1M takes 1734933 (us).
+Under 50M KV pairs, Scan 1M takes 1746327 (us).
