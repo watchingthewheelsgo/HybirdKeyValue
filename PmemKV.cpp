@@ -13,8 +13,6 @@
 
 namespace hybridKV {
 
-#ifdef HiKV_TEST
-#else
 PmemKV::PmemKV(): tree_(new BplusTree) {
     
 }
@@ -33,11 +31,8 @@ int PmemKV::Delete(const std::string &key) {
 int PmemKV::Update(const std::string &key, const std::string &val) {
     return tree_->Update(key, val);
 }
-#ifdef NEED_SCAN
 int PmemKV::Scan(const std::string &beginKey, const std::string &lastKey, std::vector<std::string> &output) {
     return tree_->Scan(beginKey, lastKey, output);
 }
-#endif
-    
-#endif
+
 }

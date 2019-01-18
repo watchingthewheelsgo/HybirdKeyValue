@@ -24,34 +24,36 @@ namespace hybridKV {
 class HashTable;
 class hyDB;
 class DB;
-class SkipList;
+// class SkipList;
+class BplusTreeList;
 class ThreadPool;
 
 
 typedef uint32_t (*hashFunc)(const char*, size_t);
 uint32_t smHasher(const char *key, size_t len);
-uint32_t SuperFastHash (const char * data, size_t len);
+uint32_t SuperFastHash(const char * data, size_t len);
 class Config {
     
 public:
     explicit Config(int);
     explicit Config();
     ~Config();
-    void generateIndex();
-    int slIndex(size_t n);
+    // void generateIndex();
+    // int slIndex(size_t n);
     
     uint32_t ht_size;
-    uint32_t ht_seed;
+    // uint32_t ht_seed;
     uint32_t ht_limits;
-    uint32_t sl_size;
-    uint32_t max_key;
-    uint32_t min_key;
+    uint32_t split_size;
+    // uint32_t max_key;
+    // uint32_t min_key;
     hashFunc hasher;
     HashTable* lastDb;
-    SkipList** sl_grp;
+    BplusTreeList** bt_grp;
     ThreadPool* thrds;
     //    Timer* tmr;
-    int* index;
+    // int* index;
+    bool in_memory;
     std::string name_;
     
 };

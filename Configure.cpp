@@ -14,54 +14,46 @@ namespace hybridKV {
     
 Config::Config(int size) : ht_size(1 << 30),
     ht_limits(1 << 31),
-    ht_seed(5381),
+    // ht_seed(5381),
     lastDb(nullptr),
-    sl_size(size),
-    max_key(128),
-    min_key(8),
+    split_size(size),
     hasher(smHasher),
-    sl_grp(nullptr),
+    bt_grp(nullptr),
     thrds(nullptr),
-    //        tmr(nullptr),
-    index(new int [max_key+1])
-     {
-        LOG("gen index");
-        generateIndex();
-}
+    in_memory(true),
+    name_("DBImpl"){
+
+    }
 Config::Config() : ht_size(1 << 30),
     ht_limits(1 << 31),
-   ht_seed(5381),
-//        lastDb(nullptr),
-//    sl_size(16),
-//        max_key(128),
+    split_size(1),
     hasher(smHasher),
-//        sl_grp(nullptr),
+    // bt_grp(nullptr),
     thrds(nullptr),
-    //        tmr(nullptr),
-//        index(new int [max_key]),
+    in_memory(false),
     name_("HiKV DB") {
         
 }
 
 Config::~Config() {
-    if (index != nullptr)
-        delete [] index;
-    //    if (tmr != nullptr)
-    //        delete tmr;
+    // if (index != nullptr)
+    //     delete [] index;
+    // //    if (tmr != nullptr)
+    // //        delete tmr;
 }
-void Config::generateIndex() {
+// void Config::generateIndex() {
 
-    int broad = (max_key-min_key) / sl_size;
-    for (int i=min_key; i<max_key+1; ++i)
-        index[i] = (i-min_key)/broad;
-}
+//     int broad = (max_key-min_key) / sl_size;
+//     for (int i=min_key; i<max_key+1; ++i)
+//         index[i] = (i-min_key)/broad;
+// }
 
 
-int Config::slIndex(size_t n) {
-    if (n >= max_key)
-        return sl_size - 1;
-    return index[n];
-}
+// int Config::slIndex(size_t n) {
+//     if (n >= max_key)
+//         return sl_size - 1;
+//     return index[n];
+// }
 
 #undef get16bits
 #if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) \

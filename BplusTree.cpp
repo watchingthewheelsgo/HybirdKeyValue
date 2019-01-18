@@ -10,28 +10,28 @@
 
 namespace hybridKV {
 
-#ifdef HiKV_TEST
-void KVPair::clear() {
-    hash_ = 0;
-    ksize_ = 0;
-    vsize_ = 0;
-    key_ = nullptr;
-    val_ = nullptr;
-#ifdef PM_WRITE_LATENCY_TEST
-    pflush((uint64_t*)(this), sizeof(KVPair));
-#endif
-}
-void KVPair::Set(const uint8_t hash, const char* key, const char* val) {
-    hash_ = hash;
-    ksize_ = (uint32_t)strlen(key);
-    vsize_ = (uint32_t)strlen(val);
-    key_ = key;
-    val_ = val;
-#ifdef PM_WRITE_LATENCY_TEST
-    pflush((uint64_t*)(this), sizeof(KVPair));
-#endif
-}
-#else
+// #ifdef HiKV_TEST
+// void KVPair::clear() {
+//     hash_ = 0;
+//     ksize_ = 0;
+//     vsize_ = 0;
+//     key_ = nullptr;
+//     val_ = nullptr;
+// #ifdef PM_WRITE_LATENCY_TEST
+//     pflush((uint64_t*)(this), sizeof(KVPair));
+// #endif
+// }
+// void KVPair::Set(const uint8_t hash, const char* key, const char* val) {
+//     hash_ = hash;
+//     ksize_ = (uint32_t)strlen(key);
+//     vsize_ = (uint32_t)strlen(val);
+//     key_ = key;
+//     val_ = val;
+// #ifdef PM_WRITE_LATENCY_TEST
+//     pflush((uint64_t*)(this), sizeof(KVPair));
+// #endif
+// }
+// #else
     
 void KVPair::clear() {
     if (kv) delete [] kv;
@@ -60,166 +60,166 @@ void KVPair::Set(const uint8_t hash, const std::string& key, const std::string& 
     pflush((uint64_t*)(this), sizeof(KVPair));
 #endif
 }
-#endif
+// #endif
 // methods of BplusTree
 
     
-#ifdef HiKV_TEST
+// #ifdef HiKV_TEST
     
-int BplusTree::Insert(const char* key, const char* val) {
-    std::string tmp_key(key);
-    const uint8_t hash = PearsonHash(tmp_key.c_str(), tmp_key.size());
-    auto leafnode = leafSearch(tmp_key);
+// int BplusTree::Insert(const char* key, const char* val) {
+//     std::string tmp_key(key);
+//     const uint8_t hash = PearsonHash(tmp_key.c_str(), tmp_key.size());
+//     auto leafnode = leafSearch(tmp_key);
     
-    if (!leafnode) {    // need a new leafnode to accommodate kv pair
-        ++leafCnt;
-        assert(head == nullptr);
-        auto new_node = std::make_unique<KVLeafNode>();
-        new_node->isLeaf = true;
+//     if (!leafnode) {    // need a new leafnode to accommodate kv pair
+//         ++leafCnt;
+//         assert(head == nullptr);
+//         auto new_node = std::make_unique<KVLeafNode>();
+//         new_node->isLeaf = true;
         
-        //        std::shared_ptr<KVLeaf> new_leaf(new KVLeaf());
-        auto new_leaf = std::make_shared<KVLeaf>();
-#ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeaf));
-#endif
-        // since there is no existing leafnode, just replace the head and mark its inner node the root.
-        auto old_head = head;
-        head = new_leaf;
-        new_leaf->next = old_head.get();
-#ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)(&head), sizeof(void*));
-        pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
-#endif    
-        new_node->leaf = new_leaf;
+//         //        std::shared_ptr<KVLeaf> new_leaf(new KVLeaf());
+//         auto new_leaf = std::make_shared<KVLeaf>();
+// #ifdef PM_WRITE_LATENCY_TEST
+//         pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeaf));
+// #endif
+//         // since there is no existing leafnode, just replace the head and mark its inner node the root.
+//         auto old_head = head;
+//         head = new_leaf;
+//         new_leaf->next = old_head.get();
+// #ifdef PM_WRITE_LATENCY_TEST
+//         pflush((uint64_t*)(&head), sizeof(void*));
+//         pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
+// #endif    
+//         new_node->leaf = new_leaf;
 
-        leafFillSpecificSlot(new_node.get(), hash, key, val, 0);
+//         leafFillSpecificSlot(new_node.get(), hash, key, val, 0);
         
-        root = std::move(new_node);
+//         root = std::move(new_node);
         
-    } else if (leafFillSlotForKey(leafnode, hash, key, val)) { // there is already an existing "RangeMatched" leafnode
+//     } else if (leafFillSlotForKey(leafnode, hash, key, val)) { // there is already an existing "RangeMatched" leafnode
         
-    } else {    // the "RangeMatched" leafnode is full, we need to split it
-        leafSplitFull(leafnode, hash, key, val);
-    }
-    return 0;
-}
+//     } else {    // the "RangeMatched" leafnode is full, we need to split it
+//         leafSplitFull(leafnode, hash, key, val);
+//     }
+//     return 0;
+// }
 
-void BplusTree::leafFillEmptySlot(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val) {
-    for (int slot = LEAF_KEYS; slot--;) {
-        if (leafnode->hashes[slot] == 0) {
-            leafFillSpecificSlot(leafnode, hash, key, val, slot);
-            return;
-        }
-    }
-}
+// void BplusTree::leafFillEmptySlot(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val) {
+//     for (int slot = LEAF_KEYS; slot--;) {
+//         if (leafnode->hashes[slot] == 0) {
+//             leafFillSpecificSlot(leafnode, hash, key, val, slot);
+//             return;
+//         }
+//     }
+// }
     
-void BplusTree::leafFillSpecificSlot(KVLeafNode *leafnode, const uint8_t hash, const char* key, const char* val, const int slot) {
-    if (leafnode->hashes[slot] == 0) {
-        leafnode->hashes[slot] = hash;
-        leafnode->keys[slot] = std::string(key);
-    }
-    leafnode->leaf->slots[slot]->Set(hash, key, val);
-}
+// void BplusTree::leafFillSpecificSlot(KVLeafNode *leafnode, const uint8_t hash, const char* key, const char* val, const int slot) {
+//     if (leafnode->hashes[slot] == 0) {
+//         leafnode->hashes[slot] = hash;
+//         leafnode->keys[slot] = std::string(key);
+//     }
+//     leafnode->leaf->slots[slot]->Set(hash, key, val);
+// }
     
-bool BplusTree::leafFillSlotForKey(KVLeafNode *leafnode, const uint8_t hash, const char* key, const char* val) {
-    int last_empty_slot = -1;
-    int key_match_slot = -1;
-    std::string tmp_key(key);
-    for (int slot = LEAF_KEYS; slot--;) {
-        auto slot_hash = leafnode->hashes[slot];
-        if (slot_hash == 0) {
-            last_empty_slot = slot;
-        } else if (slot_hash == hash) {
-             ++leafCmpCnt;
-            if (strcmp(leafnode->keys[slot].c_str(), tmp_key.c_str()) == 0) {
-                key_match_slot = slot;
-                ++dupKeyCnt;
-                break;
-            }
-        }
-    }
-    int slot = key_match_slot>=0 ? key_match_slot : last_empty_slot;
-    if (slot >= 0) {
-        leafFillSpecificSlot(leafnode, hash, key, val, slot);
-    }
-    return slot >= 0;
-}
+// bool BplusTree::leafFillSlotForKey(KVLeafNode *leafnode, const uint8_t hash, const char* key, const char* val) {
+//     int last_empty_slot = -1;
+//     int key_match_slot = -1;
+//     std::string tmp_key(key);
+//     for (int slot = LEAF_KEYS; slot--;) {
+//         auto slot_hash = leafnode->hashes[slot];
+//         if (slot_hash == 0) {
+//             last_empty_slot = slot;
+//         } else if (slot_hash == hash) {
+//              ++leafCmpCnt;
+//             if (strcmp(leafnode->keys[slot].c_str(), tmp_key.c_str()) == 0) {
+//                 key_match_slot = slot;
+//                 ++dupKeyCnt;
+//                 break;
+//             }
+//         }
+//     }
+//     int slot = key_match_slot>=0 ? key_match_slot : last_empty_slot;
+//     if (slot >= 0) {
+//         leafFillSpecificSlot(leafnode, hash, key, val, slot);
+//     }
+//     return slot >= 0;
+// }
     
-void BplusTree::leafSplitFull(KVLeafNode *leafnode, const uint8_t hash, const char* src_key, const char* val) {
-    ++leafSplitCnt;
-    ++leafCnt;
-    std::string key(src_key);
-    std::string keys[LEAF_KEYS+1];
-    keys[LEAF_KEYS] = key;
-    for (int slot = LEAF_KEYS; slot--;)
-        keys[slot] = leafnode->keys[slot];
-    auto cmp = [](const std::string& ls, const std::string& rs) {
-        return (strcmp(ls.c_str(), rs.c_str()) < 0);
-    };
-    std::sort(std::begin(keys), std::end(keys), cmp);
+// void BplusTree::leafSplitFull(KVLeafNode *leafnode, const uint8_t hash, const char* src_key, const char* val) {
+//     ++leafSplitCnt;
+//     ++leafCnt;
+//     std::string key(src_key);
+//     std::string keys[LEAF_KEYS+1];
+//     keys[LEAF_KEYS] = key;
+//     for (int slot = LEAF_KEYS; slot--;)
+//         keys[slot] = leafnode->keys[slot];
+//     auto cmp = [](const std::string& ls, const std::string& rs) {
+//         return (strcmp(ls.c_str(), rs.c_str()) < 0);
+//     };
+//     std::sort(std::begin(keys), std::end(keys), cmp);
     
-    std::string split_key = keys[LEAF_KEYS_MIDPOINT];
+//     std::string split_key = keys[LEAF_KEYS_MIDPOINT];
     
-    std::unique_ptr<KVLeafNode> new_leafnode(new KVLeafNode());
-    new_leafnode->parent = leafnode->parent;
-    new_leafnode->isLeaf = true;
+//     std::unique_ptr<KVLeafNode> new_leafnode(new KVLeafNode());
+//     new_leafnode->parent = leafnode->parent;
+//     new_leafnode->isLeaf = true;
     
     
-    {
-        //        std::shared_ptr<KVLeaf> new_leaf(new KVLeaf());
-        auto new_leaf = std::make_shared<KVLeaf>();
-#ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeaf));
-#endif
+//     {
+//         //        std::shared_ptr<KVLeaf> new_leaf(new KVLeaf());
+//         auto new_leaf = std::make_shared<KVLeaf>();
+// #ifdef PM_WRITE_LATENCY_TEST
+//         pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeaf));
+// #endif
         
-#ifdef NEED_SCAN
+// #ifdef NEED_SCAN
         
-        auto next_leaf = leafnode->leaf->next;
-        auto next_leafnode = leafnode->next;
+//         auto next_leaf = leafnode->leaf->next;
+//         auto next_leafnode = leafnode->next;
         
-        new_leafnode->next = next_leafnode;
-        leafnode->leaf->next = new_leaf.get();
+//         new_leafnode->next = next_leafnode;
+//         leafnode->leaf->next = new_leaf.get();
         
-        new_leaf->next = next_leaf;
-        leafnode->next = new_leafnode.get();
+//         new_leaf->next = next_leaf;
+//         leafnode->next = new_leafnode.get();
         
-#else
-        auto old_head = head;
-        //        auto new_leaf = std::make_shared<KVLeaf>(new KVLeaf);
-        head = new_leaf;
+// #else
+//         auto old_head = head;
+//         //        auto new_leaf = std::make_shared<KVLeaf>(new KVLeaf);
+//         head = new_leaf;
 
-#ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)(&head), sizeof(void*));
-#endif
-        new_leaf->next = old_head.get();
-#endif  
+// #ifdef PM_WRITE_LATENCY_TEST
+//         pflush((uint64_t*)(&head), sizeof(void*));
+// #endif
+//         new_leaf->next = old_head.get();
+// #endif  
    
-#ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
-#endif
+// #ifdef PM_WRITE_LATENCY_TEST
+//         pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
+// #endif
 
 
-        new_leafnode->leaf = new_leaf;
+//         new_leafnode->leaf = new_leaf;
         
-        for (int slot = LEAF_KEYS; slot--;) {
-            if (strcmp(leafnode->keys[slot].c_str(), split_key.data()) > 0) {
-                ++leafSplitCmp;
-                new_leaf->slots[slot].swap(leafnode->leaf->slots[slot]);
-                new_leafnode->hashes[slot] = leafnode->hashes[slot];
-                new_leafnode->keys[slot] = leafnode->keys[slot];
+//         for (int slot = LEAF_KEYS; slot--;) {
+//             if (strcmp(leafnode->keys[slot].c_str(), split_key.data()) > 0) {
+//                 ++leafSplitCmp;
+//                 new_leaf->slots[slot].swap(leafnode->leaf->slots[slot]);
+//                 new_leafnode->hashes[slot] = leafnode->hashes[slot];
+//                 new_leafnode->keys[slot] = leafnode->keys[slot];
                 
-                leafnode->hashes[slot] = 0;
-                leafnode->keys[slot].clear();
-            }
-        }
-        auto target = strcmp(key.c_str(), split_key.data())>0?new_leafnode.get():leafnode;
-        leafFillEmptySlot(target, hash, src_key, val);
-    }
+//                 leafnode->hashes[slot] = 0;
+//                 leafnode->keys[slot].clear();
+//             }
+//         }
+//         auto target = strcmp(key.c_str(), split_key.data())>0?new_leafnode.get():leafnode;
+//         leafFillEmptySlot(target, hash, src_key, val);
+//     }
     
-    innerUpdateAfterSplit(leafnode, std::move(new_leafnode), &split_key);
+//     innerUpdateAfterSplit(leafnode, std::move(new_leafnode), &split_key);
     
-}
-#else
+// }
+// #else
 int BplusTree::Put(const std::string& key, const std::string& val) {
     //LOG("Put: Key "<< key.c_str() << ". value " << val.c_str());
     const uint8_t hash = PearsonHash(key.c_str(), key.size());
@@ -372,7 +372,7 @@ void BplusTree::leafSplitFull(KVLeafNode *leafnode, const uint8_t hash, const st
     innerUpdateAfterSplit(leafnode, std::move(new_leafnode), &split_key);
     
 }
-#endif
+// #endif
 
 KVLeafNode* BplusTree::leafSearch(const std::string &key) {
     ++leafSearchCnt;
@@ -449,40 +449,40 @@ void BplusTree::innerUpdateAfterSplit(KVNode* node, std::unique_ptr<KVNode> new_
 }
 
 #ifdef NEED_SCAN
-#ifdef HiKV_TEST
-int BplusTree::Scan(const std::string& beginKey, const std::string& lastKey, scanRes& output) {
-    LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
-    auto leafnode = leafSearch(beginKey);
-    while (leafnode) {
-        std::vector<std::pair<std::string, int>> tmp_r;
-        for (int slot = LEAF_KEYS; slot--;) {
-            if (leafnode->hashes[slot] != 0)
-                tmp_r.push_back({leafnode->keys[slot], slot});
-        }
-        auto cmp = [](std::pair<std::string, int> &a, std::pair<std::string, int> &b) {
-            return a.first < b.first;
-        };
-        std::sort(tmp_r.begin(), tmp_r.end(), cmp);
+// #ifdef HiKV_TEST
+// int BplusTree::Scan(const std::string& beginKey, const std::string& lastKey, scanRes& output) {
+//     LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+//     auto leafnode = leafSearch(beginKey);
+//     while (leafnode) {
+//         std::vector<std::pair<std::string, int>> tmp_r;
+//         for (int slot = LEAF_KEYS; slot--;) {
+//             if (leafnode->hashes[slot] != 0)
+//                 tmp_r.push_back({leafnode->keys[slot], slot});
+//         }
+//         auto cmp = [](std::pair<std::string, int> &a, std::pair<std::string, int> &b) {
+//             return a.first < b.first;
+//         };
+//         std::sort(tmp_r.begin(), tmp_r.end(), cmp);
         
-        bool finished = false;
-        auto itor = tmp_r.begin();
-        while (itor < tmp_r.end() && itor->first < beginKey) ++itor;
-        while (itor < tmp_r.end()) {
-            finished = false;
-            if(itor->first <= lastKey) {
-                output.elems.push_back((void*)(leafnode->leaf->slots[itor->second]->key()));
-            } else {
-                finished = true; break;
-            }
-            ++itor;
-        }
-        leafnode = finished? nullptr : leafnode->next;
+//         bool finished = false;
+//         auto itor = tmp_r.begin();
+//         while (itor < tmp_r.end() && itor->first < beginKey) ++itor;
+//         while (itor < tmp_r.end()) {
+//             finished = false;
+//             if(itor->first <= lastKey) {
+//                 output.elems.push_back((void*)(leafnode->leaf->slots[itor->second]->key()));
+//             } else {
+//                 finished = true; break;
+//             }
+//             ++itor;
+//         }
+//         leafnode = finished? nullptr : leafnode->next;
         
-    }
-    output.done.Release_Store(reinterpret_cast<void*>(1));
-    return 0;
-}
-#else
+//     }
+//     output.done.Release_Store(reinterpret_cast<void*>(1));
+//     return 0;
+// }
+// #else
 int BplusTree::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
     LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
     auto leafnode = leafSearch(beginKey);
@@ -517,7 +517,7 @@ int BplusTree::Scan(const std::string& beginKey, const std::string& lastKey, std
     }
     return 0;
 }
-#endif
+// #endif
 #endif
 int BplusTree::Delete(const std::string& key) {
     LOG("Delete Key" << key.c_str());

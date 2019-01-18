@@ -19,8 +19,7 @@
 #include "BplusTree.h"
 
 namespace hybridKV {
-#ifdef HiKV_TEST
-#else
+
 class PmemKV : public hyDB {
 public:
     PmemKV();
@@ -29,20 +28,17 @@ public:
     int Get(const std::string& key, std::string* val) final;
     int Put(const std::string& key, const std::string& val) final;
     int Delete(const std::string& key) final;
-    //int Scan(const std::string& beginKey, uint64_t n, std::vector<std::string>& output) final
-    //{ return 0; }
-#ifdef NEED_SCAN
+    int Scan(const std::string& beginKey, int n, std::vector<std::string>& output) final
+    { return 0; }
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) final;
-#endif
     int Update(const std::string& key, const std::string& val) final;
-    void debug() {
-        tree_->showAll();
-    }
+    // void debug() {
+    //     tree_->showAll();
+    // }
 private:
     BplusTree* tree_;
 };
-    
-#endif
+
     
 }
 #endif /* PmemKV_h */

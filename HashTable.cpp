@@ -44,6 +44,8 @@ int Dict::Set(kvObj *key, kvObj *value, dictEntry **entryPtr) {
         if ((*entryPtr = OverWrite(key, value)) == nullptr) {
             LOG("ERROR WHEN OVER WRITE\r\n");
             return -1;
+        } else {
+            return 1;
         }
     }
     return 0;
@@ -148,8 +150,6 @@ Dict::dictEntry* Dict::Add(kvObj* key, kvObj* value, int* ret) {
     newEntry->val = value;
     newEntry->next = table[idx];
 
-    // std::cout << (long int)newEntry->key <<std::endl;
-    // std::cout << (long int)newEntry->val <<std::endl;
     table[idx] = newEntry;
 #ifdef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
@@ -188,7 +188,7 @@ Dict::dictEntry* Dict::OverWrite(const kvObj* key, kvObj* value) {
     return entry;
 }
 
-int Dict::Delete(kvObj* key) {
+int Dict::Delete(const kvObj* key, int& bt) {
 //    LOG("Function: Delete() ");
     dictEntry *tarEntry, *preEntry = nullptr;
     uint32_t hash_key = hasher(key->data(), key->size());
@@ -221,8 +221,10 @@ int Dict::Delete(kvObj* key) {
 #endif
 #endif
             }
+            bt = tarEntry->idx;
             delete tarEntry;
             decrNode();
+
             return 0;
         }
         preEntry = tarEntry;
@@ -236,6 +238,26 @@ int Dict::Delete(kvObj* key) {
     LOG(" No key to delete");
     return -1;
 }
+
+
+int HashTable::Get(const kvObj* key, std::string* value) {
+//    LOG("HashTable::Get()");
+    // kvObj* k = new kvObj(key, false);
+    int res = dict_->Get(key, value);
+//    LOG("Value: " << *value);
+//    LOG("");
+    return res;
+}
+
+int HashTable::Delete(const kvObj* key, int& bt) {
+//    LOG("HashTable::Delete()");
+    // kvObj* k = new kvObj(key, false);
+    int res = dict_->Delete(key, bt);
+//    LOG("");
+    return res;
+    
+}
+
 
 int HashTable::Get(const std::string& key, std::string* value) {
 //    LOG("HashTable::Get()");
@@ -262,7 +284,8 @@ int HashTable::Set(kvObj* key, kvObj* value, Dict::dictEntry** entryPointer) {
 int HashTable::Delete(const std::string& key) {
 //    LOG("HashTable::Delete()");
     kvObj* k = new kvObj(key, false);
-    int res = dict_->Delete(k);
+    int x;
+    int res = dict_->Delete(k, x);
 //    LOG("");
     return res;
     
@@ -271,7 +294,7 @@ int HashTable::Delete(const std::string& key) {
 void HashTable::Rehash() {
     LOG("Rehashing...");
     uint32_t newSize = std::min(dict_->size()  << 1 , limits_);
-    Dict* newDict = new Dict(newSize, seed_, hasher);
+    Dict* newDict = new Dict(newSize, hasher);
     Dict::Iterator iter(dict_);
     iter.SeekToFirst();
     Dict::dictEntry* ret = 0;

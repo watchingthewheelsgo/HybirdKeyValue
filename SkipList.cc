@@ -164,7 +164,7 @@ int SkipList::Scan(void *startkey, void* limit, scanRes &res) {
     if (startkey != nullptr && limit != nullptr) {
         Node *itor = findCeilNode(startkey, nullptr);
         while (itor!=nullptr && *(kvObj*)(itor->key_) <= *(kvObj*)(limit)) {
-            res.elems.push_back(itor->key_);
+            res.elems.push_back(((kvObj*)itor->val_)->data());
             itor = itor->Next(0);
         }
         res.done.Release_Store(reinterpret_cast<void*>(1));

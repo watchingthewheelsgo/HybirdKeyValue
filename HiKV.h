@@ -16,7 +16,7 @@
 #include "kvObject.h"
 #include "Configure.h"
 #include "DBInterface.h"
-#include "BplusTree.h"
+#include "BplusTreeList.h"
 #include "Thread.h"
 #include "Tool.h"
 
@@ -25,63 +25,61 @@
 namespace hybridKV {
 #ifdef HiKV_TEST
 void* schedule2(void* arg);
-    
+	
 struct cmdInfo {
-    cmdType type;
-    const char* key;
-    const char* value;
-    void* reserved;
+	cmdType type;
+	void* key;
+	void* value;
+	void* ptr;
 };
 
 class HiKV : public hyDB {
 public:
-    HiKV();
-    ~HiKV(){};
-    
-    int Get(const std::string& key, std::string* val);
-    int Put(const std::string& key, const std::string& val);
-    int Delete(const std::string& key);
-    int Scan(const std::string& beginKey, uint64_t n, std::vector<std::string>& output) {
-        return 0;
-    }
-#ifdef NEED_SCAN
-    int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
-#endif
-    int Update(const std::string& key, const std::string& val);
-    static void BGWork(void* db);
-    void BgInit();
-    
-    int Recover();
-    int Close();
-    bool emptyQue() {
-        return que.empty();
-    }
-    void queue_push(cmdInfo* cmd) {
-        mt_.Lock();
-        que.push_back(cmd);
-        mt_.unLock();
-    }
-    cmdInfo* extraQue() {
-        mt_.Lock();
-        auto res = que.front();
-        que.pop_front();
-        mt_.unLock();
-        return res;
-    }
-    BplusTree* tree() {
-        return tree_;
-    }
-    void debug() {
-        tree_->showAll();
-    }
+	HiKV();
+	~HiKV(){};
+	
+	int Get(const std::string& key, std::string* val);
+	int Put(const std::string& key, const std::string& val);
+	int Delete(const std::string& key);
+	int Scan(const std::string& beginKey, int n, std::vector<std::string>& output) {
+		return 0;
+	}
+	int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
+	int Update(const std::string& key, const std::string& val);
+	static void BGWork(void* db);
+	void BgInit();
+	
+	int Recover();
+	int Close();
+	bool emptyQue() {
+		return que.empty();
+	}
+	void queue_push(cmdInfo* cmd) {
+		mt_.Lock();
+		que.push_back(cmd);
+		mt_.unLock();
+	}
+	cmdInfo* extraQue() {
+		mt_.Lock();
+		auto res = que.front();
+		que.pop_front();
+		mt_.unLock();
+		return res;
+	}
+	BplusTreeList* tree() {
+		return tree_;
+	}
+	// void debug() {
+	//     tree_->showAll();
+	// }
 private:
-    Config* cfg;
-    Mutex mt_;
-    std::deque<cmdInfo*> que;
-    BplusTree* tree_;
-    HashTable* ht_;
-    ThreadPool* thrds;
-    
+	Config* cfg;
+	Mutex mt_;
+	std::deque<cmdInfo*> que;
+	BplusTreeList* tree_;
+	HashTable* ht_;
+	ThreadPool* thrds;
+	
 };
 #endif
 }

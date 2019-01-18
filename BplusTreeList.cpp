@@ -55,8 +55,10 @@ bool BplusTreeList::leafFillSlotForKey(KVLeafNodeFin *leafnode, uint8_t hash, KV
     for (auto itor=leafnode->lst.begin(); itor != leafnode->lst.end(); ++itor) {
         int m =strcmp((*itor).key.c_str(), kv->key());
         if (m == 0) {
-            (*itor->ptr)->Update(kv);
-            ++dupKeyCnt;
+             ++dupKeyCnt;
+            (*itor->ptr)->Update(kv->getVal());
+            kv->freeKey();
+            delete kv; // the KVPairFin is no longer needed.
             return true;
         } else if (m > 0) {
             ++leafnode->cnt;
@@ -66,8 +68,9 @@ bool BplusTreeList::leafFillSlotForKey(KVLeafNodeFin *leafnode, uint8_t hash, KV
             break;
         }
     }
-    if (leafnode->cnt == LEAF_KEYS_L+1)
+    if (leafnode->cnt == LEAF_KEYS_L+1) {
         return false;
+    }
     return true;
 }
     
@@ -206,8 +209,84 @@ void BplusTreeList::innerUpdateAfterSplit(KVNodeFin* node, std::unique_ptr<KVNod
     innerUpdateAfterSplit(inner, std::move(new_inner), &new_split_key);
 }
 
+int BplusTreeList::Scan(const kvObj* beginKey, int n, scanRes* r) {
+    // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    if (n<1)
+        return 0;
+    auto leafnode = leafSearch(beginKey->data());
+    while (leafnode) {      
+        for (auto itor=leafnode->lst.begin(); itor!=leafnode->lst.end(); ++itor) {
+            int x=strcmp(itor->key.c_str(), beginKey->data());
+            if (x>= 0) {
+                r->elems.push_back((*itor->ptr)->val());
+                --n;
+            } 
+            if (n == 0)
+                break;
+        }
+        if (n == 0)
+            break;
+        leafnode = leafnode->next;
+        
+    }
+    r->done.Release_Store(reinterpret_cast<void*>(1));
+    return 0;
+}
+int BplusTreeList::Scan(const kvObj* beginKey, const kvObj* lastKey, scanRes* r) {
+    // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    if (beginKey == nullptr || lastKey == nullptr)
+        return -1;
+    auto leafnode = leafSearch(beginKey->data());
+    uint8_t proc = 0;           
+    while (leafnode) {
+        for (auto itor=leafnode->lst.begin(); itor!=leafnode->lst.end(); ++itor) {
+            if(proc==0 && strcmp(itor->key.c_str(), beginKey->data())< 0)
+                continue; // search for start
+            else {
+                if (proc == 0)
+                    proc = 1; //scaning
+                if (proc == 1 && strcmp(itor->key.c_str(), lastKey->data()) > 0) {
+                    proc = 2;
+                    break; // search end
+                }
+                r->elems.push_back((*itor->ptr)->val());
+            }
+        }
+        if (proc = 2)
+            break;
+        leafnode = leafnode->next;
+        
+    }
+    r->done.Release_Store(reinterpret_cast<void*>(1));
+    return 0;
+}
+int BplusTreeList::Scan(const std::string& beginKey, const std::string&lastKey, std::vector<std::string>& v) {
+    // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    auto leafnode = leafSearch(beginKey.c_str());
+    uint8_t proc = 0;           
+    while (leafnode) {
+        for (auto itor=leafnode->lst.begin(); itor!=leafnode->lst.end(); ++itor) {
+            if(proc==0 && strcmp(itor->key.c_str(), beginKey.c_str())< 0)
+                continue; // search for start
+            else {
+                if (proc == 0)
+                    proc = 1; //scaning
+                if (proc == 1 && strcmp(itor->key.c_str(), lastKey.c_str()) > 0) {
+                    proc = 2;
+                    break; // search end
+                }
+                v.push_back(std::string((*itor->ptr)->val()));
 
-#ifdef NEED_SCAN
+            }
+        }
+        if (proc = 2)
+            break;
+        leafnode = leafnode->next;
+        
+    }
+    // output.done.Release_Store(reinterpret_cast<void*>(1));
+    return 0;
+}
 int BplusTreeList::Scan(const std::string& beginKey, int n, std::vector<std::string>& v) {
     // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
     if (n<1)
@@ -232,7 +311,6 @@ int BplusTreeList::Scan(const std::string& beginKey, int n, std::vector<std::str
     return 0;
 }
 
-#endif
 int BplusTreeList::Delete(const std::string& key) {
     auto leafnode = leafSearch(key.c_str());   
     if (leafnode) {
@@ -253,7 +331,26 @@ int BplusTreeList::Delete(const std::string& key) {
     }
     return -1;
 }
-
+int BplusTreeList::Delete(const kvObj* key) {
+auto leafnode = leafSearch(key->data());   
+if (leafnode) {
+    const uint8_t hash = PearsonHash(key->data(), key->size());
+    for (auto itor=leafnode->lst.begin(); itor!=leafnode->lst.end(); ++itor) {
+        if (itor->hash == hash) {
+            int x=strcmp(itor->key.c_str(), key->data());
+            if (x==0) {
+                delete *(itor->ptr);
+                leafnode->leaf->lst.erase(itor->ptr);
+                leafnode->lst.erase(itor);
+                return 0;
+            } else if (x > 0) {
+                return -1;
+            }
+        }
+    }
+}
+return -1;
+}
 int BplusTreeList::Get(const std::string& key, std::string* val) {
 //    LOG("Get Key " << key.c_str());
     auto leafnode = leafSearch(key.c_str());

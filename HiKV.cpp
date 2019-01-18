@@ -15,10 +15,8 @@
 
 namespace hybridKV {
     
-#ifdef HiKV_TEST
-    
-HiKV::HiKV():cfg(new Config(' ')), tree_(new BplusTree),
-    ht_(new HashTable(cfg->ht_size, cfg->ht_seed, cfg->ht_limits, cfg->hasher, false)),
+HiKV::HiKV():cfg(new Config()), tree_(new BplusTreeList(0)),
+    ht_(new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, cfg->in_memory)),
     thrds(new ThreadPool(1)) {
     
 }
@@ -41,16 +39,14 @@ void* schedule2(void* arg) {
             switch (type) {
                 case kInsertType:
                 case kUpdateType:
-                    res = bgTree->Insert(cmd->key, cmd->value);
+                    res = bgTree->Insert((KVPairFin*)cmd->ptr);
                     break;
                 case kDeleteType:
-                    res = bgTree->Delete(std::string(cmd->key));
+                    res = bgTree->Delete((kvObj*)cmd->key);
                     break;
-#ifdef NEED_SCAN
                 case kScanNorType:
-                    res = bgTree->Scan(std::string(cmd->key), std::string(cmd->value), *(scanRes*)cmd->reserved);
+                    res = bgTree->Scan((kvObj*)cmd->key, (kvObj*)cmd->value, (scanRes*)cmd->ptr);
                     break;
-#endif
                 default:
                     break;
             }
@@ -72,21 +68,23 @@ int HiKV::Get(const std::string& key, std::string* val) {
 int HiKV::Put(const std::string& key, const std::string& val) {
     kvObj* newKey = new kvObj(key, true);
     kvObj* value = new kvObj(val, true);
+    KVPairFin* kv = new KVPairFin(newKey, value);
 #ifdef PM_WRITE_LATENCY_TEST
     newKey->latency(true);
     value->latency(true);
+    pflush((uint64_t*)kv, sizeof(KVPairFin));
 #endif
     Dict::dictEntry* entryPointer = nullptr;
     if (ht_->Set(newKey, value, &entryPointer) == -1 || entryPointer == nullptr)
         return -1;
-/*
+
     auto cmd = new cmdInfo();
     cmd->type = kInsertType;
-    cmd->key = newKey->data();
-    cmd->value = value->data();
+    cmd->key = nullptr;
+    cmd->value = nullptr;
+    cmd->ptr = (void*)kv;
     
     queue_push(cmd);
-*/
     return 0;
     
 }
@@ -94,48 +92,59 @@ int HiKV::Put(const std::string& key, const std::string& val) {
 int HiKV::Update(const std::string& key, const std::string& val) {
     kvObj* rpKey = new kvObj(key, false);
     kvObj* newVal = new kvObj(val, true);
+    KVPairFin* kv = new KVPairFin(rpKey, newVal);
     Dict::dictEntry* entryPointer = nullptr;
     if (ht_->Set(rpKey, newVal, &entryPointer) == -1 || entryPointer == nullptr)
         return -1;
     auto cmd = new cmdInfo();
     cmd->type = kUpdateType;
-    cmd->key = rpKey->data();
-    cmd->value = newVal->data();
-    
+    cmd->key = nullptr;
+    cmd->value = nullptr;
+    cmd->ptr = (void*)kv;
+
     queue_push(cmd);
     return 0;
 }
     
 int HiKV::Delete(const std::string& key) {
+
+    kvObj* delKey = new kvObj(key, false);
+    Dict::dictEntry* entryPointer = nullptr;
+    int idx;
+    if (ht_->Delete(delKey, idx) == -1)
+        return -1;
+    
     auto cmd = new cmdInfo();
     cmd->type = kDeleteType;
-    cmd->key = key.data();
-    
+    cmd->key = delKey;
+    cmd->value = nullptr;
+    cmd->ptr = nullptr;
+
     queue_push(cmd);
     return 0;
 }
-#ifdef NEED_SCAN
 int HiKV::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
     
+    kvObj* bgKey = new kvObj(beginKey, false);
+    kvObj* edKey = new kvObj(lastKey, false);
+
     auto cmd = new cmdInfo();
     
     scanRes res;
     
     cmd->type = kScanNorType;
-    cmd->key = beginKey.data();
-    cmd->value = lastKey.data();
-    cmd->reserved = (void*)(&res);
+    cmd->key = bgKey;
+    cmd->value = edKey;
+    cmd->ptr = (void*)(&res);
     
     queue_push(cmd);
     
     while (reinterpret_cast<uint64_t>(res.done.Acquire_Load()) == 0);
     while (!res.elems.empty()) {
-        output.push_back(std::string((char *)res.elems.front()));
+        output.push_back(std::string(res.elems.front()));
         res.elems.pop_front();
     }
     return 0;
 }
-#endif
 
-#endif
 }

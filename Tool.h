@@ -41,7 +41,7 @@ public:
         elems.clear();
     }
     AtomicPointer done;
-    std::list<void*> elems;
+    std::list<const char*> elems;
 };
 #define LOG(info) if(debug_on) std::cout<< info << std::endl
 // void Latency(uint64_t time) {

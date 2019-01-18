@@ -86,12 +86,6 @@ class SkipList {
         return cmdQue.empty();
     }
 
-    // void lockQue() {
-    //     mtx_.Lock();
-    // }
-    // void unlockQue() {
-    //     mtx_.unlock();
-    // }
     void cmd_push(void *tdNode) {
         mtx_.Lock();
         cmdQue.push_back((slCmdNode*)tdNode);

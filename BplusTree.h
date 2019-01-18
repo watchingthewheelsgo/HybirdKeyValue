@@ -37,27 +37,27 @@ static const int LEAF_KEYS = 48;
 static const int LEAF_KEYS_MIDPOINT = LEAF_KEYS / 2;
 
 // persistent
-#ifdef HiKV_TEST
-class KVPair {
-    public:
-        uint8_t hash() { return hash_; }
-        const char* key() const { return key_; }
-        const uint32_t keysize() const { return ksize_; }
-        const uint32_t valsize() const { return vsize_; }
-//        const char* key() { return kv; }
-        const char* val() { return val_; }
-        bool valid() { return hash_ != 0; }
-        void clear();
-        void Set(const uint8_t hash, const char* key, const char* value);
+
+// class KVPair {
+//     public:
+//         uint8_t hash() { return hash_; }
+//         const char* key() const { return key_; }
+//         const uint32_t keysize() const { return ksize_; }
+//         const uint32_t valsize() const { return vsize_; }
+// //        const char* key() { return kv; }
+//         const char* val() { return val_; }
+//         bool valid() { return hash_ != 0; }
+//         void clear();
+//         void Set(const uint8_t hash, const char* key, const char* value);
         
-    private:
-        uint8_t hash_;
-        uint32_t ksize_;
-        uint32_t vsize_;
-        const char* key_;
-        const char* val_;
-}; 
-#else
+//     private:
+//         uint8_t hash_;
+//         uint32_t ksize_;
+//         uint32_t vsize_;
+//         const char* key_;
+//         const char* val_;
+// }; 
+
 class KVPair {
 public:
     uint8_t hash() { return hash_; }
@@ -77,7 +77,7 @@ private:
     uint32_t vsize_;
     char* kv;
 };
-#endif
+
 // persistent
 struct KVLeaf {
     KVLeaf() {
@@ -132,23 +132,23 @@ class BplusTree {
 public:
     BplusTree():dupKeyCnt(0), leafSplitCmp(0), leafCmpCnt(0), leafSplitCnt(0), innerUpdateCnt(0), leafCnt(0), leafSearchCnt(0), depth(0) {};
     ~BplusTree(){};
-#ifdef HiKV_TEST
-    int Insert(const char* key, const char* val);
+// #ifdef HiKV_TEST
+//     int Insert(const char* key, const char* val);
 
-#else
+// #else
     //general interfaces provided by Bplus tree
     int Put(const std::string& key, const std::string& val);
-#endif
+// #endif
     int Delete(const std::string& key);
     int Get(const std::string& key, std::string* val);
-//    int Scan(const std::string& beginKey, uint64_t n, std::vector<std::string>& output);
+    int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
 
-#ifdef NEED_SCAN
-#ifdef HiKV_TEST
-    int Scan(const std::string& beginKey, const std::string& lastKey, scanRes& output);
-#endif
+// #ifdef NEED_SCAN
+// #ifdef HiKV_TEST
+    // int Scan(const std::string& beginKey, const std::string& lastKey, scanRes& output);
+// #endif
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
-#endif
+// #endif
     int Update(const std::string& key, const std::string& val);
     
     void showAll() {
@@ -182,17 +182,17 @@ protected:
     KVLeafNode* leafSearch(const std::string& key);
     uint8_t PearsonHash(const char* data, const size_t size);
     
-#ifdef HiKV_TEST
-    bool leafFillSlotForKey(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val);
-    void leafFillSpecificSlot(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val, const int slot);
-    void leafSplitFull(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val);
-    void leafFillEmptySlot(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val);
-#else
+// #ifdef HiKV_TEST
+//     bool leafFillSlotForKey(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val);
+//     void leafFillSpecificSlot(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val, const int slot);
+//     void leafSplitFull(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val);
+//     void leafFillEmptySlot(KVLeafNode* leafnode, const uint8_t hash, const char* key, const char* val);
+// #else
     bool leafFillSlotForKey(KVLeafNode* leafnode, const uint8_t hash, const std::string& key, const std::string& val);
     void leafFillSpecificSlot(KVLeafNode* leafnode, const uint8_t hash, const std::string& key, const std::string& val, const int slot);
     void leafSplitFull(KVLeafNode* leafnode, const uint8_t hash, const std::string& key, const std::string& val);
     void leafFillEmptySlot(KVLeafNode* leafnode, const uint8_t hash, const std::string& key, const std::string& val);
-#endif
+// #endif
     void innerUpdateAfterSplit(KVNode* node, std::unique_ptr<KVNode> new_node, std::string* split_key);
 
     
@@ -200,9 +200,6 @@ private:
     std::unique_ptr<KVNode> root; // root node of the B+tree
     std::shared_ptr<KVLeaf> head; // list head of leafnodes.
 
-//#ifdef NEED_SCAN
-//    std::unique_ptr<KVLeaf> tail; // list tail of leafnodes.
-//#endif
 };
  
 }

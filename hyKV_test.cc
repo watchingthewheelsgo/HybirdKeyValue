@@ -37,7 +37,7 @@ int keySizeIn(int x, int y) {
 }
 
 bool isBreakPoint(int i) {
-    return (i==10*mbi) || (i==20*mbi) || (i==30*mbi) || (i==40*mbi) || (i==50*mbi) 
+    return (i==5*mbi) || (i==10*mbi) || (i==20*mbi) || (i==30*mbi) || (i==40*mbi) || (i==50*mbi) 
             || (i==60*mbi) || (i==70*mbi) || (i==80*mbi) || (i==90*mbi) || (i==100*mbi);
 }
 
@@ -53,7 +53,7 @@ void testBplusTreeList(int num, int keyIdx) {
     LOG("PM RD latency = "<< pm_latency_read);
 #endif
     Config* cfg = new Config();
-    auto tree = new BplusTreeList();
+    auto tree = new BplusTreeList(0);
     std::vector<std::string> keys;
     std::vector<int> keyLens = {16, 40, 64};
     int keySize;
@@ -232,7 +232,7 @@ void testBplusTreeList(int num, int keyIdx) {
             std::cout << "wrong option" <<std::endl;
         }
     }
-
+    fclose(logFd);
 }
 
 void testHashTable(int num, int keyIdx) {
@@ -249,7 +249,7 @@ void testHashTable(int num, int keyIdx) {
     LOG("PM RD latency = "<< pm_latency_read);
 #endif
     Config* cfg = new Config();
-    auto ht = new HashTable(cfg->ht_size, cfg->ht_seed, cfg->ht_limits, cfg->hasher, true);
+    auto ht = new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, true);
     std::vector<std::string> keys;
     std::vector<int> keyLens = {16, 40, 64};
     int keySize;
@@ -346,7 +346,7 @@ void testHashTable(int num, int keyIdx) {
             fprintf(logFd, "Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());   
             printf("Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());         
             nums+=sz*mbi;
-            printf("DB Size = %dM", nums / mbi);
+            printf("DB Size = %dM\n", nums / mbi);
         } else if (op == 2) {
             TimerRDT tmr_op, tmr_idle_op;
             assert(nums == keys.size());
@@ -368,7 +368,7 @@ void testHashTable(int num, int keyIdx) {
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
                 auto key_r = keys[sId+k];
-
+            
                 tmr_op.start();
                 ht->Delete(key_r);
                 tmr_op.stop();
@@ -607,6 +607,8 @@ void dataStructureTest() {
     while (true) {
         std::cout << "Choose A DS : 0 - HashTable,  1 - B+Tree,  2 - SkipList, 3 - Quit" <<std::endl;
         std::cin >> ch;
+        if(ch == 3)
+            return;
         std::cout << "Set Dataset Size(M)(default 50M): ";
         int size=0, keyLen;
         std::cin >> size;
@@ -616,8 +618,10 @@ void dataStructureTest() {
             testHashTable(size, keyLen);
         } else if (ch == 1) {
             testBplusTreeList(size, keyLen);
-        } else {
+        } else if (ch==2) {
             testSkipList(size, keyLen);
+        } else {
+            std::cout<< "Are you fucking blind?" <<std::endl;
         }
         std::cout << "Continue?(y/n)" <<std::endl;
         char x;
@@ -627,7 +631,234 @@ void dataStructureTest() {
             break;
         }
     }
+}
 
+
+void ycsbTest() {
+
+}
+std::string day = "118";
+std::string fname = "/home/why/log";
+void microBench(int num, int keyIdx, const std::string& name) {
+    // std::string fname = "/home/why/log"
+    FILE* logFd = fopen((fname+name+day).c_str(),"a+");
+    LOG("Function for "<< name << " performance test.");
+    fprintf(logFd,"Function for %s performance test.\n", name.c_str());
+#ifdef PM_WRITE_LATENCY_TEST
+    fprintf(logFd, "PM Write Latency = %d ns\n", pm_latecny_write);
+    LOG("PM WR latency = "<< pm_latecny_write);
+#endif
+    
+#ifdef PM_READ_LATENCY_TEST
+    fprintf(logFd, "PM Read latency = %d ns\n", pm_latency_read);
+    LOG("PM RD latency = "<< pm_latency_read);
+#endif
+    hyDB* db=nullptr;
+    int bgNums = 0;
+    if (name == "myKV") {
+        std::cout << "Input the BG Btrees you want to create: ";
+        std::cin >> bgNums;
+        assert(bgNums > 0 && bgNums < 10);
+    }
+
+    hyDB::Open(&db, name, bgNums);
+
+    if (db == nullptr)
+        LOG("Failed to open db: "<< name);
+    std::vector<std::string> keys;
+    std::vector<int> keyLens = {16, 40, 64};
+    int keySize;
+    int nums = num * mbi;
+    fprintf(logFd, "Loading data, size = %dM.", nums/mbi);
+    if (keyIdx < 4)
+        fprintf(logFd, "key Length = %dB\n", keyLens[keyIdx]);
+    else
+        fprintf(logFd, "key Length is uniform of {16, 40, 64}\n");
+    LOG("Loading data, size = " << nums/mbi << "M.");
+    uint32_t valLength = 100;
+
+    TimerRDT tmr_load, tmr_idle;
+    for (int i=1; i<nums+1; ++i) {
+        if (keyIdx == 3)
+            keySize = keyLens[random() % 3];
+        else 
+            keySize = keyLens[keyIdx]; 
+        auto key = randomString(keySize);
+        auto val = randomString(valLength);
+        keys.push_back(key);
+
+        tmr_load.start();
+        db->Put(key, val);
+        tmr_load.stop();
+
+        tmr_idle.start();
+        tmr_idle.stop();
+
+        if(isBreakPoint(i)) {
+            fprintf(logFd, "Loading %dM...\n ", i/mbi);
+            // fprintf(logFd, "Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
+            fprintf(logFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            // fprintf(logFd, "conflictCnt = %d, Max conflict = %d, dupKeyCnt = %d.\n",ht->conflictCnt(), ht->maxConflict(), ht->dupKeyCnt());
+            printf("Loading %dM...\n ", i/mbi);
+            // printf("Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
+            printf("Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            TimerRDT tmr_rd, tmr_idle_rd;
+            int sId = random() % (keys.size()-2*mbi-1);
+            for (int k=0; k<2*mbi; ++k) {
+                std::string rdKey = keys[sId+k];
+                std::string rdVal;
+
+                tmr_rd.start();
+                db->Get(rdKey, &rdVal);
+                tmr_rd.stop();
+
+                tmr_idle_rd.start();
+                tmr_idle_rd.stop();
+            }
+            fprintf(logFd, "Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
+            printf("Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
+
+        }
+
+    }
+
+    fprintf(logFd, "Loading %dM KV pair finished.\n", nums/mbi);
+    printf("Loading %dM KV pair finished.\n", nums/mbi);
+
+    while (true) {
+        std::cout << "Choose Options: 1-Insert x(M), 2-Get x(M), 3-Delete x(M), 4-Update x(M), 5-scan, 6-Quit" <<std::endl;
+        int op, sz; 
+        std::cin >> op >> sz;
+        if (op == 1) {
+            TimerRDT tmr_op, tmr_idle_op;
+            for (int k=0; k<sz*mbi; ++k) {
+                if (keyIdx == 3)
+                    keySize = keyLens[random() % 3];
+                else 
+                    keySize = keyLens[keyIdx]; 
+                auto ky = randomString(keySize);
+                auto vl = randomString(valLength);
+                keys.push_back(ky);
+                tmr_op.start();
+                db->Put(ky, vl);
+                tmr_op.stop();
+                tmr_idle_op.start();
+                tmr_idle_op.stop();
+            }
+            
+            fprintf(logFd, "Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());   
+            printf("Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());         
+            nums+=sz*mbi;
+            printf("DB Size = %dM\n", nums / mbi);
+        } else if (op == 2) {
+            TimerRDT tmr_op, tmr_idle_op;
+            assert(nums == keys.size());
+            int sId = random() % (nums-sz*mbi);
+            for (int k=0; k<sz*mbi; ++k) {
+                auto key_r = keys[sId+k];
+                std::string rdVal;
+
+                tmr_op.start();
+                db->Get(key_r, &rdVal);
+                tmr_op.stop();
+                tmr_idle_op.start();
+                tmr_idle_op.stop();
+            }
+            fprintf(logFd, "Under %dM KV pairs. Get %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs. Get %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+        } else if (op == 3) {
+            TimerRDT tmr_op, tmr_idle_op;
+            int sId = random() % (nums-sz*mbi);
+            for (int k=0; k<sz*mbi; ++k) {
+                auto key_r = keys[sId+k];
+            
+                tmr_op.start();
+                db->Delete(key_r);
+                tmr_op.stop();
+                
+                tmr_idle_op.start();
+                tmr_idle_op.stop();
+            }
+            fprintf(logFd, "Under %dM KV pairs, Delete %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs, Delete %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());
+            nums -= sz*mbi;
+            keys.erase(keys.begin()+sId, keys.begin()+sId+sz*mbi);
+            printf("DB Size = %dM", nums / mbi);
+        } else if (op == 4) {
+            TimerRDT tmr_op, tmr_idle_op;
+            int sId = random() % (nums-sz*mbi);
+            for (int k=0; k<sz*mbi; ++k) {
+                auto ky = keys[sId+k];
+                auto vl = randomString(valLength);
+
+                tmr_op.start();
+                db->Put(ky, vl);
+                tmr_op.stop();
+                tmr_idle_op.start();
+                tmr_idle_op.stop();
+            }
+            fprintf(logFd, "Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+        } else if (op == 5) {
+            TimerRDT tmr_op, tmr_idle_op;
+            int sId = random() % (nums-sz*mbi);
+            for (int k=0; k<sz*mbi; ++k) {
+                auto bkey = keys[sId+k];
+                auto ekey = bkey;
+                ekey[ekey.size()-1] += 10;
+                // auto vl = randomString(valLength);
+                std::vector<std::string> val;
+
+                tmr_op.start();
+                db->Scan(bkey, ekey, val);
+                tmr_op.stop();
+                tmr_idle_op.start();
+                tmr_idle_op.stop();
+            }
+            fprintf(logFd, "Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+
+        } else if (op == 6) {
+            break;
+        } else {
+            std::cout << "wrong option" <<std::endl;
+        }
+    }
+    fclose(logFd);
+}
+void testPmemKV() {
+
+}
+void testMyKV() {
+
+}
+void kvStoreTest() {
+    int ch;
+    while (true) {
+        std::cout << "Choose A DS : 0 - myKV,  1 - HiKV,  2 - PmemKV, 3 - Quit" <<std::endl;
+        std::cin >> ch;
+        if (ch == 3)
+            return;
+        std::cout << "Set Dataset Size(M)(default 50M): ";
+        int size=0, keyLen;
+        std::cin >> size;
+        std::cout << "Set Key Length: {0-16, 1-32, 2-48, 3-64, 4-uniform, 5-gev}: ";
+        std::cin >> keyLen;
+        if (ch == 0) {
+            microBench(size, keyLen, "myKV");
+        } else if (ch == 1) {
+            microBench(size, keyLen, "HiKV");
+        } else {
+            microBench(size, keyLen, "PmemKV");
+        }
+        std::cout << "Continue?(y/n)" <<std::endl;
+        char x;
+        std::cin >> x;
+        if (x == 'n') {
+            std::cout << "exit dataStructureTest()." <<std::endl;
+            break;
+        }
+    }
 }
 int main(int argc, char** argv) {
 
@@ -655,25 +886,25 @@ int main(int argc, char** argv) {
         }
     }
     init_pflush(cpu_speed_mhz, pm_latecny_write, pm_latency_read);
-    dataStructureTest();
+    // dataStructureTest();
+    kvStoreTest();
     return 0;
 
-/*
-    init_pflush(cpu_speed_mhz, pm_latecny_write, pm_latency_read);
-    hyDB* db = nullptr;
-    std::vector<std::string> kvid = {"PmemKV", "HiKV", "hyKV"}; 
 
-//    hyDB::Open(&db, pmemKV);
-    std::cout << "Testing DB " << kvid[DBid] <<std::endl;
-    std::cout << "BackGround threadnums = " << threadnums <<std::endl;  
-    hyDB::Open(&db, kvid[DBid], threadnums);
-//    db->showCfg();
-    std::cout << "DB Created: " <<kvid[DBid] <<std::endl;
-*/
+//     hyDB* db = nullptr;
+//     std::vector<std::string> kvid = {"PmemKV", "HiKV", "hyKV"}; 
+
+//    // hyDB::Open(&db, pmemKV);
+//     std::cout << "Testing DB " << kvid[DBid] <<std::endl;
+//     std::cout << "BackGround threadnums = " << threadnums <<std::endl;  
+//     hyDB::Open(&db, kvid[DBid], threadnums);
+// //    db->showCfg();
+//     std::cout << "DB Created: " <<kvid[DBid] <<std::endl;
+
 }
 
-#ifndef HiKV_TEST 
-void testBplusTree(int nums) {
+
+void testBplusTreePair(int nums) {
     LOG("Function testBplusTree performance.(KVPair version)");
 #ifdef PM_WRITE_LATENCY_TEST
     LOG("PM WR latency = "<< pm_latecny_write);
@@ -722,120 +953,118 @@ void testBplusTree(int nums) {
     LOG("leaf set slot compare count " << tree->leafCmpCnt);
     LOG("BplusTree test done.");
 }
-#else
-void testBplusTree(int nums) {
-    FILE* logFd = fopen("/home/why/logFileBTree.txt","a+");
-    fprintf(logFd,"Function testBplusTree performance.(KVObj version).\n");
-    LOG("Function testBplusTree performance.(KVObj version).");
-    #ifdef PM_WRITE_LATENCY_TEST
-    LOG("PM WR latency = "<< pm_latecny_write);
-#endif
+// void testBplusTreeObj(int nums) {
+//     FILE* logFd = fopen("/home/why/logFileBTree.txt","a+");
+//     fprintf(logFd,"Function testBplusTree performance.(KVObj version).\n");
+//     LOG("Function testBplusTree performance.(KVObj version).");
+//     #ifdef PM_WRITE_LATENCY_TEST
+//     LOG("PM WR latency = "<< pm_latecny_write);
+// #endif
     
-#ifdef PM_READ_LATENCY_TEST
-    LOG("PM RD latency = "<< pm_latency_read);
-#endif
-    LOG("KV pair nums = " << nums / 1000000 << "M.");
-    Config* cfg = new Config();
-    auto tree = new BplusTree();
-    std::vector<uint32_t> minLen(10);
-    generateScope(kvUniform, minLen);
-    uniformKeyGenerator gen(minLen);
-    std::vector<std::string> keys;
-    std::vector<int> keyLens = {16, 32, 64, 96};
-    Random rndVal(301);
-    uint32_t valLength = 100;
-    TimerRDT tmr_obj, tmr_opt, tmr_idle;
-    for (int i=0; i<nums+1; ++i) {
-        int keySize = keyLens[0];
-        auto key = randomString(keySize);
-        auto val = randomString(valLength);
-        keys.push_back(key);
-        //LOG("round " << i);
-        if (i==5*mbi || i==10 * mbi || i == 20*mbi || i == 30*mbi || i==40*mbi || i == 50*mbi)  {
-            LOG("after " << i/mbi << "M insertion...");
-            fprintf(logFd, "after %dM insertion...\n", i/mbi);
-            fprintf(logFd, "Malloc time = %d(us).\n", tmr_obj.getDuration());
-            fprintf(logFd, "Insert time = %d(us).\n", tmr_opt.getDuration());
-            fprintf(logFd, "Idle time = %d(us).\n", tmr_idle.getDuration());
-            fprintf(logFd, "depth of the tree = %d.\n", tree->depth);
-            // tmr_obj.getDuration();
-            // tmr_opt.getDuration();
-            // tmr_idle.getDuration();
-            LOG("depth of the Tree " << tree->depth);
-            LOG("leafnode count " << tree->leafCnt);
-            LOG("innernode split time " << tree->innerUpdateCnt);
-            LOG("leafnode split time " << tree->leafSplitCnt << ". Compare count " << tree->leafSplitCmp);
-            LOG("leaf set slot compare count " << tree->leafCmpCnt);
-            LOG("dup key cnt = " << tree->dupKeyCnt);
-        }
-        if (i==5*mbi || i==10 * mbi || i == 20*mbi || i == 30*mbi || i==40*mbi || i == 50*mbi) {
-            TimerRDT tmr_rd, tmr_idle_rd;
-            const int rd_size = 10 * mbi;
-            for (int j=0; j<rd_size; ++j) {
-                auto rdKey = keys[random() % keys.size()];
-                std::string rdVal;
+// #ifdef PM_READ_LATENCY_TEST
+//     LOG("PM RD latency = "<< pm_latency_read);
+// #endif
+//     LOG("KV pair nums = " << nums / 1000000 << "M.");
+//     Config* cfg = new Config();
+//     auto tree = new BplusTree();
+//     std::vector<uint32_t> minLen(10);
+//     generateScope(kvUniform, minLen);
+//     uniformKeyGenerator gen(minLen);
+//     std::vector<std::string> keys;
+//     std::vector<int> keyLens = {16, 32, 64, 96};
+//     Random rndVal(301);
+//     uint32_t valLength = 100;
+//     TimerRDT tmr_obj, tmr_opt, tmr_idle;
+//     for (int i=0; i<nums+1; ++i) {
+//         int keySize = keyLens[0];
+//         auto key = randomString(keySize);
+//         auto val = randomString(valLength);
+//         keys.push_back(key);
+//         //LOG("round " << i);
+//         if (i==5*mbi || i==10 * mbi || i == 20*mbi || i == 30*mbi || i==40*mbi || i == 50*mbi)  {
+//             LOG("after " << i/mbi << "M insertion...");
+//             fprintf(logFd, "after %dM insertion...\n", i/mbi);
+//             fprintf(logFd, "Malloc time = %d(us).\n", tmr_obj.getDuration());
+//             fprintf(logFd, "Insert time = %d(us).\n", tmr_opt.getDuration());
+//             fprintf(logFd, "Idle time = %d(us).\n", tmr_idle.getDuration());
+//             fprintf(logFd, "depth of the tree = %d.\n", tree->depth);
+//             // tmr_obj.getDuration();
+//             // tmr_opt.getDuration();
+//             // tmr_idle.getDuration();
+//             LOG("depth of the Tree " << tree->depth);
+//             LOG("leafnode count " << tree->leafCnt);
+//             LOG("innernode split time " << tree->innerUpdateCnt);
+//             LOG("leafnode split time " << tree->leafSplitCnt << ". Compare count " << tree->leafSplitCmp);
+//             LOG("leaf set slot compare count " << tree->leafCmpCnt);
+//             LOG("dup key cnt = " << tree->dupKeyCnt);
+//         }
+//         if (i==5*mbi || i==10 * mbi || i == 20*mbi || i == 30*mbi || i==40*mbi || i == 50*mbi) {
+//             TimerRDT tmr_rd, tmr_idle_rd;
+//             const int rd_size = 10 * mbi;
+//             for (int j=0; j<rd_size; ++j) {
+//                 auto rdKey = keys[random() % keys.size()];
+//                 std::string rdVal;
 
-                tmr_rd.start();
-                tree->Get(rdKey, &rdVal);
-                tmr_rd.stop();
-                tmr_idle_rd.start();
-                tmr_idle_rd.stop();
+//                 tmr_rd.start();
+//                 tree->Get(rdKey, &rdVal);
+//                 tmr_rd.stop();
+//                 tmr_idle_rd.start();
+//                 tmr_idle_rd.stop();
 
-            }
-            LOG("under db size = " <<i/mbi << "M, get " << rd_size << " keys.");
-            fprintf(logFd, "under db size = %dM, get %dM keys.\n", i/mbi, rd_size/mbi);
-            fprintf(logFd, "Get time = %d(us).\n", tmr_rd.getDuration());
-            fprintf(logFd, "Idle time = %d(us).\n", tmr_idle_rd.getDuration());
+//             }
+//             LOG("under db size = " <<i/mbi << "M, get " << rd_size << " keys.");
+//             fprintf(logFd, "under db size = %dM, get %dM keys.\n", i/mbi, rd_size/mbi);
+//             fprintf(logFd, "Get time = %d(us).\n", tmr_rd.getDuration());
+//             fprintf(logFd, "Idle time = %d(us).\n", tmr_idle_rd.getDuration());
    
-        }
-        tmr_obj.start();
-        auto k_obj = new kvObj(key, true);
-        auto v_obj = new kvObj(val, true);
-        tmr_obj.stop();
+//         }
+//         tmr_obj.start();
+//         auto k_obj = new kvObj(key, true);
+//         auto v_obj = new kvObj(val, true);
+//         tmr_obj.stop();
 
-        tmr_opt.start();
-        tree->Insert(k_obj->data(), v_obj->data());
-        tmr_opt.stop();
+//         tmr_opt.start();
+//         tree->Insert(k_obj->data(), v_obj->data());
+//         tmr_opt.stop();
 
-        tmr_idle.start();
-        tmr_idle.stop();
-    }
-    LOG("after all (" << nums/mbi <<"M) insertion...");
-    fprintf(logFd, "after all (%dM) insertion...\n", nums/mbi);
-    fprintf(logFd, "Malloc time = %d(us).\n", tmr_obj.getDuration());
-    fprintf(logFd, "Insert time = %d(us).\n", tmr_opt.getDuration());
-    fprintf(logFd, "Idle time = %d(us).\n", tmr_idle.getDuration());      
-    TimerRDT tmr_wr;
-    for (int k=0; k<2*mbi; ++k) {
-        int keySz = keyLens[0];
-        auto wrKey = randomString(keySz);
-        auto wrVal = randomString(valLength);
+//         tmr_idle.start();
+//         tmr_idle.stop();
+//     }
+//     LOG("after all (" << nums/mbi <<"M) insertion...");
+//     fprintf(logFd, "after all (%dM) insertion...\n", nums/mbi);
+//     fprintf(logFd, "Malloc time = %d(us).\n", tmr_obj.getDuration());
+//     fprintf(logFd, "Insert time = %d(us).\n", tmr_opt.getDuration());
+//     fprintf(logFd, "Idle time = %d(us).\n", tmr_idle.getDuration());      
+//     TimerRDT tmr_wr;
+//     for (int k=0; k<2*mbi; ++k) {
+//         int keySz = keyLens[0];
+//         auto wrKey = randomString(keySz);
+//         auto wrVal = randomString(valLength);
 
-        tmr_wr.start();
-        auto k_obj_wr = new kvObj(wrKey, true);
-        auto v_obj_wr = new kvObj(wrVal, true);
-        tree->Insert(k_obj_wr->data(), v_obj_wr->data());
-        tmr_wr.stop();
-    }
-    TimerRDT tmr_r;
-    for (int k=0; k<2*mbi; ++k) {
-        auto rKey = keys[random() % keys.size()];
-        std::string rVal;
+//         tmr_wr.start();
+//         auto k_obj_wr = new kvObj(wrKey, true);
+//         auto v_obj_wr = new kvObj(wrVal, true);
+//         tree->Insert(k_obj_wr->data(), v_obj_wr->data());
+//         tmr_wr.stop();
+//     }
+//     TimerRDT tmr_r;
+//     for (int k=0; k<2*mbi; ++k) {
+//         auto rKey = keys[random() % keys.size()];
+//         std::string rVal;
 
-        tmr_r.start();
-        tree->Get(rKey, &rVal);
-        tmr_r.stop();
-    }
-    fprintf(logFd, "When %dM, Read 2M time = %d(us).\n", nums/mbi, tmr_r.getDuration());
-    fprintf(logFd, "When %dM, Insert 2M time = %d(us).\n", nums/mbi, tmr_wr.getDuration());
+//         tmr_r.start();
+//         tree->Get(rKey, &rVal);
+//         tmr_r.stop();
+//     }
+//     fprintf(logFd, "When %dM, Read 2M time = %d(us).\n", nums/mbi, tmr_r.getDuration());
+//     fprintf(logFd, "When %dM, Insert 2M time = %d(us).\n", nums/mbi, tmr_wr.getDuration());
     
-    LOG("leafSeach time " << tree->leafSearchCnt);
-    LOG("depth of the Tree " << tree->depth);
-    LOG("leafnode count " << tree->leafCnt);
-    LOG("innernode split time " << tree->innerUpdateCnt);
-    LOG("leafnode split time " << tree->leafSplitCnt << ". Compare count " << tree->leafSplitCmp);
-    LOG("leaf set slot compare count " << tree->leafCmpCnt);
-    LOG("dup key cnt = " << tree->dupKeyCnt);
-    LOG("BplusTree test done.");
-}
-#endif
+//     LOG("leafSeach time " << tree->leafSearchCnt);
+//     LOG("depth of the Tree " << tree->depth);
+//     LOG("leafnode count " << tree->leafCnt);
+//     LOG("innernode split time " << tree->innerUpdateCnt);
+//     LOG("leafnode split time " << tree->leafSplitCnt << ". Compare count " << tree->leafSplitCmp);
+//     LOG("leaf set slot compare count " << tree->leafCmpCnt);
+//     LOG("dup key cnt = " << tree->dupKeyCnt);
+//     LOG("BplusTree test done.");
+// }

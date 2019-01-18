@@ -23,8 +23,9 @@ public:
     struct dictEntry {
         void* key;
         void* val;
-        void* slNodeAddr;
+        void* btNodeAddr;
         dictEntry* next;
+        int idx;
     };
     class Iterator {
     public:
@@ -47,10 +48,10 @@ public:
     typedef dictEntry* entryPointer;
 //    typedef uint32_t (*hashFunc)(const void*, size_t, uint32_t);
 	// Dict():
-	explicit Dict(uint32_t size, uint32_t seed, hashFunc hash) : size_(size),
+	explicit Dict(uint32_t size, hashFunc hash) : size_(size),
 		mask_(size - 1), 
 		used_(0), 
-		seed_(seed), 
+		// seed_(seed), 
 //        limits_(limits),
         conflictCnt(0),
         maxConflict(0),
@@ -79,7 +80,7 @@ public:
     
     int Set(kvObj* key, kvObj* value, dictEntry** entryPtr);
     int Get(const kvObj* key, std::string* value);
-    int Delete(kvObj* key);
+    int Delete(const kvObj* key, int& bt);
     
     void remove(uint32_t idx) {
         assert(table[idx] != nullptr);
@@ -111,21 +112,21 @@ public:
 //         pflush((uint64_t*)(&used_), sizeof(uint32_t));
 // #endif
     }
+    // Test Use. declared to test "Hash Conflict". 
     int maxConflict;
     int conflictCnt;
     int maxConflictRd;
     int conflictCntRd;
     int dupKeyCnt;
 private:
-	// void destoryDB();
+	// private method to implement Dict::Set();
     dictEntry* Add(kvObj* key, kvObj* value, int* ret);
     dictEntry* OverWrite(const kvObj* key, kvObj* value);
+
     hashFunc hasher;
 	uint32_t size_;
 	uint32_t mask_;
 	uint32_t used_;
-	uint32_t seed_;
-//    uint32_t limits_;
 	dictEntry** table;
 };
 inline Dict::Iterator::Iterator(Dict* dict) {
@@ -155,7 +156,6 @@ inline void Dict::Iterator::Next() {
     }
 }
 inline void Dict::Iterator::SeekToFirst() {
-    //    int curIdx = 0;
     while (curIdx < dict_->size()) {
         if (dict_->table[curIdx] != nullptr) {
             entry_ = dict_->table[curIdx];
@@ -167,19 +167,23 @@ inline void Dict::Iterator::SeekToFirst() {
 
 // 
 
-  
+// Wrapper of Dict. Provide Rehash(); to grow dict capacity.
+// Mutex can be used to implement fine-grained lock on dictEntry;
+// In current HT version, no concurrency data structure is considered.
 class HashTable {
 public:
 
-    HashTable(uint32_t size, uint32_t seed, uint32_t limits, hashFunc hash, bool in_memory): mtx_(), seed_(seed), limits_(limits), hasher(hash), dict_(new Dict(size, seed, hash)), is_memory(in_memory) {
+    HashTable(uint32_t size, uint32_t limits, hashFunc hash, bool in_memory): mtx_(), limits_(limits), hasher(hash), dict_(new Dict(size, hash)), is_memory(in_memory) {
 
     }
-//    int getIndex(const kvObj* key);
-//    Dict::dictEntry* getEntry(const kvObj* key);
-//    kvObj* LookUp(const kvObj* key);
     int Set(kvObj* key, kvObj* value, Dict::dictEntry** entrypointer);
     int Get(const std::string& key, std::string* value);
     int Delete(const std::string& key);
+    
+    int Get(const kvObj* key, std::string* value);
+    int Delete(const kvObj* key, int& bt);
+    
+    // provided to printf conflict info of dict. 
     int conflictCnt() {
         return dict_->conflictCnt;
     }
@@ -202,12 +206,11 @@ public:
     }
 private:
     void Rehash();
-//    Dict::dictEntry* Add(kvObj* key, kvObj* value);
-//    Dict::dictEntry* OverWrite(const kvObj* key, kvObj* value);
+
     bool is_memory;
     Mutex mtx_;
     uint32_t seed_;
-    uint32_t limits_;
+    uint32_t limits_; // to limit table capacity
     hashFunc hasher;
     Dict* dict_;
 };
