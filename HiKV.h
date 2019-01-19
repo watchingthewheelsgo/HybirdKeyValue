@@ -19,8 +19,9 @@
 #include "BplusTreeList.h"
 #include "Thread.h"
 #include "Tool.h"
-
+// #include "Timer.h"
 #include "hyKV_def.h"
+#include "latency.hpp"
 
 namespace hybridKV {
 #ifdef HiKV_TEST
@@ -35,6 +36,7 @@ struct cmdInfo {
 
 class HiKV : public hyDB {
 public:
+	typedef std::deque::iterator QITOR;
 	HiKV();
 	~HiKV(){};
 	
@@ -72,13 +74,19 @@ public:
 	// void debug() {
 	//     tree_->showAll();
 	// }
+	uint64_t time() {
+		return tmr.getDuration();
+	}
+	TimerRDT tmr;
 private:
+	uint32_t flushTh;
 	Config* cfg;
 	Mutex mt_;
 	std::deque<cmdInfo*> que;
 	BplusTreeList* tree_;
 	HashTable* ht_;
-	ThreadPool* thrds;
+	// ThreadPool* thrds;
+	std::vector<std::thread> th;
 	
 };
 #endif

@@ -15,6 +15,6 @@
 //#define PM_WRITE_LATENCY_TEST
 //#define PM_READ_LATENCY_TEST
 
-#define LINUX_CPU_AFFINITY
+// #define LINUX_CPU_AFFINITY
 
 #endif /* hyKV_def_h */

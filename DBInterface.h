@@ -11,7 +11,7 @@
 
 #include <string>
 #include <vector>
-
+#include "Tool.h"
 namespace hybridKV {
     
 
@@ -28,6 +28,7 @@ public:
     virtual int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) = 0;
     virtual int Update(const std::string& key, const std::string& val) = 0;
     // virtual void debug() = 0;
+    virtual uint64_t time() = 0;
 private:
     hyDB(const hyDB&);
     void operator=(const hyDB&);

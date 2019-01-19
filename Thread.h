@@ -3,6 +3,7 @@
 #define __THREAD_H
 
 #include <pthread.h>
+#include <thread>
 #include "hyKV_def.h"
 namespace hybridKV {
 

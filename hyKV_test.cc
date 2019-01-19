@@ -700,8 +700,10 @@ void microBench(int num, int keyIdx, const std::string& name) {
             fprintf(logFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
             // fprintf(logFd, "conflictCnt = %d, Max conflict = %d, dupKeyCnt = %d.\n",ht->conflictCnt(), ht->maxConflict(), ht->dupKeyCnt());
             printf("Loading %dM...\n ", i/mbi);
+            if (name == "HiKV")
+                printf("Push Queue Cost time: %d(us).", db->time() - tmr_idle.getDuration());
             // printf("Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
-            printf("Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            printf("Inert time = %d(us).\n", tmr_load.getDuration()- tmr_idle.getDuration());
             TimerRDT tmr_rd, tmr_idle_rd;
             int sId = random() % (keys.size()-2*mbi-1);
             for (int k=0; k<2*mbi; ++k) {
@@ -855,7 +857,7 @@ void kvStoreTest() {
         char x;
         std::cin >> x;
         if (x == 'n') {
-            std::cout << "exit dataStructureTest()." <<std::endl;
+            std::cout << "exit kvStoreTest()." <<std::endl;
             break;
         }
     }

@@ -16,9 +16,9 @@
 namespace hybridKV {
     
 HiKV::HiKV():cfg(new Config()), tree_(new BplusTreeList(0)),
-    ht_(new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, cfg->in_memory)),
-    thrds(new ThreadPool(1)) {
-    
+    ht_(new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, cfg->in_memory))
+    {
+        
 }
 
 void HiKV::BGWork(void* db) {
@@ -26,7 +26,8 @@ void HiKV::BGWork(void* db) {
 }
 
 void HiKV::BgInit() {
-    thrds->CreateJobs(schedule2, reinterpret_cast<void*>(this), 0);
+    th.push_back(std::thread(schedule2,  reinterpret_cast<void*>(this)));
+    // thrds->CreateJobs(schedule2, reinterpret_cast<void*>(this), 0);
 }
 void* schedule2(void* arg) {
     auto db = reinterpret_cast<HiKV*>(arg);
@@ -78,13 +79,16 @@ int HiKV::Put(const std::string& key, const std::string& val) {
     if (ht_->Set(newKey, value, &entryPointer) == -1 || entryPointer == nullptr)
         return -1;
 
-    auto cmd = new cmdInfo();
-    cmd->type = kInsertType;
-    cmd->key = nullptr;
-    cmd->value = nullptr;
-    cmd->ptr = (void*)kv;
+    // tmr.start();
+    // auto cmd = new cmdInfo();
+    // cmd->type = kInsertType;
+    // cmd->key = nullptr;
+    // cmd->value = nullptr;
+    // cmd->ptr = (void*)kv;
     
-    queue_push(cmd);
+    // queue_push(cmd);
+    // tmr.stop();
+
     return 0;
     
 }

@@ -60,8 +60,10 @@ public:
 			table = new entryPointer [size_]; 
 			for (int i=0; i<size_; ++i)
 				table[i] = nullptr;
+#ifdef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
             pflush((uint64_t*)(table), sizeof(void*) * size_);
+#endif
 #endif
 	}
 	~Dict() {
@@ -108,9 +110,11 @@ public:
 	}
     void incrNode() { 
     	++used_;
-// #ifdef PM_WRITE_LATENCY_TEST
-//         pflush((uint64_t*)(&used_), sizeof(uint32_t));
-// #endif
+#ifdef HiKV_TEST
+#ifdef PM_WRITE_LATENCY_TEST
+        pflush((uint64_t*)(&used_), sizeof(uint32_t));
+#endif
+#endif
     }
     // Test Use. declared to test "Hash Conflict". 
     int maxConflict;

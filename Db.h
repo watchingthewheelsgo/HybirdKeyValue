@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 #include "DBInterface.h"
-
+#include "Tool.h"
 namespace hybridKV {
 
 class BplusTreeList;
@@ -17,12 +17,20 @@ class ThreadPool;
 class scanRes;
     
 void* schedule(void *);
-    
+
+
+struct btCmdNode {
+    cmdType type;
+    void* key;
+    void* val;
+    void* ptr;
+};
+
 class DBImpl : public hyDB {
 public:
 //    friend class ThreadPool;
     typedef BplusTreeList* btPointer;
-    
+
     DBImpl(int size);
     ~DBImpl();
     
@@ -33,13 +41,16 @@ public:
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
     int Update(const std::string& key, const std::string& val);
     static void BGWork(void* db);
+    uint64_t time() {
+        return 0;
+    }
     void BgInit();
     void waitBGWork();
-    void slGeo();
-    void showCfg();
+
+
+
     int Recover();
     int Close();
-    void debug() { }
     int getApproIndex();
 private:
     // void queue_push();

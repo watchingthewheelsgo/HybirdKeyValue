@@ -28,7 +28,7 @@ int hyDB::Open(hyDB** db, const std::string dbname, int size) {
         *db = newDB;
     } else if (dbname == "HiKV") {
         HiKV* newDB = new HiKV();
-        HiKV::BGWork(reinterpret_cast<void*>(newDB));
+        // HiKV::BGWork(reinterpret_cast<void*>(newDB));
         *db = newDB;
     } else if (dbname == "myKV") {
         DBImpl* newDB = new DBImpl(size);
@@ -260,11 +260,8 @@ void DBImpl::BgInit() {
 }
     
 void* schedule(void* arg) {
-    //        assert(idx < sl_size);
     BplusTreeList* curBT = reinterpret_cast<BplusTreeList*>(arg);
     
-//    std::cout << curSL->idx() <<std::endl;
-    // assert(idx == curSL->idx());
     // maybe add control with onSchedule();
     while (true) {
         while (!curBT->emptyQue()) {

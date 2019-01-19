@@ -126,12 +126,6 @@ struct KVLeafNodeFin : KVNodeFin {
 //    std::list<std::string> elems;
 //};
 //#endif
-struct btCmdNode {
-    cmdType type;
-    void* key;
-    void* val;
-    void* ptr;
-};
 
 // int BplusTreeList::WriteBatch(std::vector<btCmdNode>& batch) {
 //     if (batch.empty())
@@ -143,6 +137,7 @@ struct btCmdNode {
 
 class BplusTreeList {
 public:
+    typedef std::deque<btCmdNode*>::reference QREF;
     BplusTreeList(int idx):index(idx), dupKeyCnt(0), leafSplitCmp(0), leafCmpCnt(0), leafSplitCnt(0), innerUpdateCnt(0), leafCnt(0), leafSearchCnt(0), depth(0) {};
     ~BplusTreeList(){};
 
@@ -166,15 +161,22 @@ public:
     // int Update(const std::string& key, const std::string& val); // update is in Insert();
     
     // Interfaces used to handle banckground request.
-    void cmd_push(void *tdNode) {
+    void cmd_push(btCmdNode* tdNode) {
         mtx_.Lock();
-        cmdQue.push_back((btCmdNode*)tdNode);
+        auto res = mp.find(tdNode->key);
+        if (res!= mp.end()) {
+            res->second.val = tdNode->val;
+        } else {
+            cmdQue.push_back(tdNode);
+            mp.insert((kvObj*)tdNode->key, cmdQue.back());
+        }
         mtx_.unLock();
     }
     // only be called when cmdQue is not empty
     btCmdNode* extractCmd() {
         mtx_.Lock();
         btCmdNode* cmd = cmdQue.front();
+        mp.erase((kvObj*)cmd->key);
         cmdQue.pop_front();
         mtx_.unLock();
         return cmd;
@@ -208,7 +210,8 @@ protected:
 private:
     uint8_t index; // sequence number of this Bplus Tree.
     Mutex mtx_;
-    std::deque<btCmdNode*> cmdQue;  
+    std::deque<btCmdNode*> cmdQue;
+    std::unordered_map<kvObj* key, QREF ref, > mp;  
     std::unique_ptr<KVNodeFin> root; // root node of the B+tree
     std::shared_ptr<KVLeafFin> head; // list head of leaf. All leafs are in one list. 
 };
