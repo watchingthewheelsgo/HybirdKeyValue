@@ -13,7 +13,8 @@
 #include "SkipList.h"
 #include "kvObject.h"
 #include "microBench.h"
-
+#include "hyKV_def.h"
+// #include "Tool.h"
 //#include "BplusTree.h"
 using namespace hybridKV;
 
@@ -27,8 +28,8 @@ const int mbi = 1000 * 1000;
 int threadnums = 10;
 int DBid = 2;
 int cpu_speed_mhz = 3100;
-int pm_latecny_write = 600;
-int pm_latency_read = 150;
+int pm_latecny_write = 400;
+int pm_latency_read = 100;
 
 int kv_nums = 50000000;
 
@@ -80,6 +81,11 @@ void testBplusTreeList(int num, int keyIdx) {
         auto k_obj = new kvObj(key, true);
         auto v_obj = new kvObj(val, true);
         auto kv_pair = new KVPairFin(k_obj, v_obj);
+#ifdef PM_WRITE_LATENCY_TEST
+        pflush((uint64_t*)k_obj->data(), k_obj->size());
+        pflush((uint64_t*)v_obj->data(), v_obj->size());
+        pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
+#endif
         tmr_obj.stop();
 
         tmr_load.start();
@@ -95,9 +101,15 @@ void testBplusTreeList(int num, int keyIdx) {
             fprintf(logFd, "Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
             fprintf(logFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
 
+            LOG("--------------------statistics-----------------------");
             printf("Loading %dM...\n ", i/mbi);
             printf("Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
             printf("Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            printf("search time = %d(us).\n", tree->tmr_search.getDuration());
+            printf("insert time  = %d(us).\n", tree->tmr_insert.getDuration());
+            printf("leaf split time  = %d(us).\n", tree->tmr_split.getDuration());
+            printf("inner update time  = %d(us).\n", tree->tmr_inner.getDuration());
+            printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
             TimerRDT tmr_rd, tmr_idle_rd;
             int sId = random() % (keys.size()-2*mbi-1);
             for (int k=0; k<2*mbi; ++k) {
@@ -133,7 +145,7 @@ void testBplusTreeList(int num, int keyIdx) {
         int op, sz; 
         std::cin >> op >> sz;
         if (op == 1) {
-            TimerRDT tmr_op, tmr_idle_op;
+            TimerRDT tmr_alloc, tmr_op, tmr_idle_op;
             for (int k=0; k<sz*mbi; ++k) {
                 if (keyIdx == 3)
                     keySize = keyLens[random() % 3];
@@ -142,18 +154,28 @@ void testBplusTreeList(int num, int keyIdx) {
                 auto ky = randomString(keySize);
                 auto vl = randomString(valLength);
                 keys.push_back(ky);
-                tmr_op.start();
+                
+                tmr_alloc.start();
                 auto k_obj_wr = new kvObj(ky, true);
                 auto v_obj_wr = new kvObj(vl, true);
                 auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
+#ifdef PM_WRITE_LATENCY_TEST
+                pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
+                pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
+                pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
+#endif
+                tmr_alloc.stop();
+
+                tmr_op.start();
                 tree->Insert(kv_pair);
                 tmr_op.stop();
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
             
-            fprintf(logFd, "Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());   
-            printf("Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());         
+            fprintf(logFd, "Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration());   
+            printf("Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration());         
+            printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
             nums+=sz*mbi;
             printf("DB Size = %dM\n", nums / mbi);
         } else if (op == 2) {
@@ -192,23 +214,33 @@ void testBplusTreeList(int num, int keyIdx) {
             keys.erase(keys.begin()+sId, keys.begin()+sId+sz*mbi);
             printf("DB Size = %dM\n", nums / mbi);
         } else if (op == 4) {
-            TimerRDT tmr_op, tmr_idle_op;
+            TimerRDT tmr_alloc, tmr_op, tmr_idle_op;
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
                 auto ky = keys[sId+k];
                 auto vl = randomString(valLength);
 
-                tmr_op.start();
+                tmr_alloc.start();
                 auto k_obj_wr = new kvObj(ky, false);
                 auto v_obj_wr = new kvObj(vl, true);
                 auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
+#ifdef PM_WRITE_LATENCY_TEST
+                pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
+                pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
+                pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
+#endif
+                tmr_alloc.stop();
+
+                tmr_op.start();
                 tree->Insert(kv_pair);
                 tmr_op.stop();
+
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
-            fprintf(logFd, "Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
-            printf("Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            fprintf(logFd, "Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
         } else if (op == 5) {
             TimerRDT tmr_op, tmr_idle_op;
             int sId = random() % (nums-sz*mbi);
@@ -276,6 +308,10 @@ void testHashTable(int num, int keyIdx) {
         tmr_obj.start();
         auto k_obj = new kvObj(key, true);
         auto v_obj = new kvObj(val, true);
+#ifdef PM_WRITE_LATENCY_TEST
+        pflush((uint64_t*)k_obj->data(), k_obj->size());
+        pflush((uint64_t*)v_obj->data(), v_obj->size());
+#endif
         tmr_obj.stop();
 
         // time of "Set"
@@ -324,7 +360,7 @@ void testHashTable(int num, int keyIdx) {
         int op, sz; 
         std::cin >> op >> sz;
         if (op == 1) {
-            TimerRDT tmr_op, tmr_idle_op;
+            TimerRDT tmr_alloc, tmr_op, tmr_idle_op;
             for (int k=0; k<sz*mbi; ++k) {
                 if (keyIdx == 3)
                     keySize = keyLens[random() % 3];
@@ -333,9 +369,18 @@ void testHashTable(int num, int keyIdx) {
                 auto ky = randomString(keySize);
                 auto vl = randomString(valLength);
                 keys.push_back(ky);
-                tmr_op.start();
+                
+                tmr_alloc.start();
                 auto k_obj_wr = new kvObj(ky, true);
                 auto v_obj_wr = new kvObj(vl, true);
+                // emulate_latency_ns(400);
+                // // emulate_latency_ns(1200);
+#ifdef PM_WRITE_LATENCY_TEST
+                pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
+                pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
+#endif
+                tmr_alloc.stop();
+                tmr_op.start();
                 Dict::dictEntry* entry = nullptr;
                 ht->Set(k_obj_wr, v_obj_wr, &entry);
                 tmr_op.stop();
@@ -343,8 +388,8 @@ void testHashTable(int num, int keyIdx) {
                 tmr_idle_op.stop();
             }
             
-            fprintf(logFd, "Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());   
-            printf("Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());         
+            fprintf(logFd, "Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration());   
+            printf("Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration());         
             nums+=sz*mbi;
             printf("DB Size = %dM\n", nums / mbi);
         } else if (op == 2) {
@@ -382,23 +427,28 @@ void testHashTable(int num, int keyIdx) {
             keys.erase(keys.begin()+sId, keys.begin()+sId+sz*mbi);
             printf("DB Size = %dM", nums / mbi);
         } else if (op == 4) {
-            TimerRDT tmr_op, tmr_idle_op;
+            TimerRDT tmr_alloc, tmr_op, tmr_idle_op;
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
+                // LOG("U k=" << k);
                 auto ky = keys[sId+k];
                 auto vl = randomString(valLength);
 
-                tmr_op.start();
+                tmr_alloc.start();
                 auto k_obj_wr = new kvObj(ky, false);
                 auto v_obj_wr = new kvObj(vl, true);
+                pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
+                // emulate_latency_ns(1000);
+                tmr_alloc.stop();
+                tmr_op.start();
                 Dict::dictEntry* entry = nullptr;
                 ht->Set(k_obj_wr, v_obj_wr, &entry);
                 tmr_op.stop();
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
-            fprintf(logFd, "Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
-            printf("Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            fprintf(logFd, "Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
         } else if (op == 5) {
             break;
         }else {
@@ -678,6 +728,8 @@ void microBench(int num, int keyIdx, const std::string& name) {
     uint32_t valLength = 100;
 
     TimerRDT tmr_load, tmr_idle;
+    TimerRDT tmr_all;
+    db->newRound();
     for (int i=1; i<nums+1; ++i) {
         if (keyIdx == 3)
             keySize = keyLens[random() % 3];
@@ -700,8 +752,8 @@ void microBench(int num, int keyIdx, const std::string& name) {
             fprintf(logFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
             // fprintf(logFd, "conflictCnt = %d, Max conflict = %d, dupKeyCnt = %d.\n",ht->conflictCnt(), ht->maxConflict(), ht->dupKeyCnt());
             printf("Loading %dM...\n ", i/mbi);
-            if (name == "HiKV")
-                printf("Push Queue Cost time: %d(us).", db->time() - tmr_idle.getDuration());
+            // if (name == "HiKV")
+            //     printf("Push Queue Cost time: %d(us).", db->time() - tmr_idle.getDuration());
             // printf("Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
             printf("Inert time = %d(us).\n", tmr_load.getDuration()- tmr_idle.getDuration());
             TimerRDT tmr_rd, tmr_idle_rd;
@@ -719,8 +771,9 @@ void microBench(int num, int keyIdx, const std::string& name) {
             }
             fprintf(logFd, "Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
             printf("Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
-
+            db->newRound();
         }
+
 
     }
 
@@ -888,8 +941,8 @@ int main(int argc, char** argv) {
         }
     }
     init_pflush(cpu_speed_mhz, pm_latecny_write, pm_latency_read);
-    // dataStructureTest();
-    kvStoreTest();
+    dataStructureTest();
+    // kvStoreTest();
     return 0;
 
 

@@ -19,13 +19,6 @@ class scanRes;
 void* schedule(void *);
 
 
-struct btCmdNode {
-    cmdType type;
-    void* key;
-    void* val;
-    void* ptr;
-};
-
 class DBImpl : public hyDB {
 public:
 //    friend class ThreadPool;
@@ -40,9 +33,11 @@ public:
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
     int Update(const std::string& key, const std::string& val);
+    void signalBG();
+    // void newRound();
     static void BGWork(void* db);
-    uint64_t time() {
-        return 0;
+    void newRound() {
+        
     }
     void BgInit();
     void waitBGWork();

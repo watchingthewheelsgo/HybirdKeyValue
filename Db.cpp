@@ -28,7 +28,7 @@ int hyDB::Open(hyDB** db, const std::string dbname, int size) {
         *db = newDB;
     } else if (dbname == "HiKV") {
         HiKV* newDB = new HiKV();
-        // HiKV::BGWork(reinterpret_cast<void*>(newDB));
+        HiKV::BGWork(reinterpret_cast<void*>(newDB));
         *db = newDB;
     } else if (dbname == "myKV") {
         DBImpl* newDB = new DBImpl(size);
@@ -87,8 +87,8 @@ int DBImpl::Put(const std::string& key, const std::string& val) {
     kvObj* newKey = new kvObj(key, true);
     kvObj* value = new kvObj(val, true);
 #ifdef PM_WRITE_LATENCY_TEST
-    newKey->latency(true);
-    value->latency(true);
+    pflush((uint64_t*)newKey, newKey->size());
+    pflush((uint64_t*)value, value->size());
 #endif
     Dict::dictEntry* entryPointer = nullptr;
     int x = ht_->Set(newKey, value, &entryPointer);
@@ -108,7 +108,7 @@ int DBImpl::Put(const std::string& key, const std::string& val) {
         node->key = nullptr;
         node->val = nullptr;
         node->type = kInsertType;
-        bt_grp[idx]->cmd_push((void*)node);
+        bt_grp[idx]->cmd_push(node);
     } else {
         // reserved to change to write-batch version
         int idx = entryPointer->idx;
@@ -119,7 +119,7 @@ int DBImpl::Put(const std::string& key, const std::string& val) {
         node->val = (void*)value;
         node->type = kUpdateType;
 
-        bt_grp[idx]->cmd_push((void*)node);
+        bt_grp[idx]->cmd_push(node);
         delete newKey;
     }
     return 0;
@@ -130,7 +130,7 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     kvObj* rpKey = new kvObj(key, false);
     kvObj* newVal = new kvObj(val, true);
 #ifdef PM_WRITE_LATENCY_TEST
-    newVal->latency(true);
+    pflush((uint64_t*)newVal, newVal->size());
 #endif
     Dict::dictEntry* entryPointer = nullptr;
     if (ht_->Set(rpKey, newVal, &entryPointer) == -1 || entryPointer == nullptr)
@@ -145,10 +145,18 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     node->val = (void*)newVal;
     node->type = kUpdateType;
     
-    bt_grp[idx]->cmd_push((void*)node);
+    bt_grp[idx]->cmd_push(node);
     return 0;
 }
-
+void DBImpl::signalBG() {
+    btCmdNode* node = new btCmdNode;
+    node->type = kFlushType;
+    for (int i=0; i<bt_size; ++i) {
+        bt_grp[i]->cmd_push(node);
+    }
+    delete node;
+    return;
+}
 int DBImpl::Delete(const std::string& key) {
     
     kvObj* delKey = new kvObj(key, false);
@@ -166,7 +174,7 @@ int DBImpl::Delete(const std::string& key) {
     node->type = kDeleteType;
     node->ptr = nullptr;
     
-    bt_grp[idx]->cmd_push((void*)node);
+    bt_grp[idx]->cmd_push(node);
     return 0;
 }
 
@@ -206,7 +214,7 @@ int DBImpl::Scan(const std::string& beginKey, const std::string& lastKey, std::v
         node->ptr = (void*)(result[idx]);
         node->type = kScanNorType;
         
-        bt_grp[idx]->cmd_push((void*)node);
+        bt_grp[idx]->cmd_push(node);
     }
     for (int idx=0; idx<bt_size; ++idx) {
         while (reinterpret_cast<uint64_t>(result[idx]->done.Acquire_Load()) == 0);
@@ -264,6 +272,9 @@ void* schedule(void* arg) {
     
     // maybe add control with onSchedule();
     while (true) {
+        // if (toFlush) {
+        //     while (!curBT->emptyQue)
+        // }
         while (!curBT->emptyQue()) {
             btCmdNode* cmd = curBT->extractCmd();
             int res = 0;
@@ -303,8 +314,11 @@ void* schedule(void* arg) {
                 //     res = curSL->Scan(cmd->key, (uint64_t)(cmd->priv), *(reinterpret_cast<scanRes*>(cmd->val)));
                 //     break;
                 case kScanNorType:
-                    assert(curBT->emptyQue());
+                    // assert(curBT->emptyQue());
                     res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
+                    break;
+                case kFlushType:
+                    curBT->clock();
                     break;
                 default:
                     LOG("unKnown cmd type");

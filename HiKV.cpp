@@ -15,7 +15,7 @@
 
 namespace hybridKV {
     
-HiKV::HiKV():cfg(new Config()), tree_(new BplusTreeList(0)),
+HiKV::HiKV():cfg(new Config()), tree_(new BplusTreeList(0)), bgSchedule(true),
     ht_(new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, cfg->in_memory))
     {
         
@@ -41,12 +41,18 @@ void* schedule2(void* arg) {
                 case kInsertType:
                 case kUpdateType:
                     res = bgTree->Insert((KVPairFin*)cmd->ptr);
+                    db->tmr_all.stop();
                     break;
                 case kDeleteType:
                     res = bgTree->Delete((kvObj*)cmd->key);
+                    db->tmr_all.stop();
                     break;
                 case kScanNorType:
                     res = bgTree->Scan((kvObj*)cmd->key, (kvObj*)cmd->value, (scanRes*)cmd->ptr);
+                    db->tmr_all.stop();
+                    break;
+                case kFlushType:
+                    db->bgSchedule = false;
                     break;
                 default:
                     break;
@@ -58,6 +64,12 @@ void* schedule2(void* arg) {
     
     return nullptr;
 }
+void HiKV::newRound() {
+    tmr_all.setZero();
+    tmr_ht.setZero();
+    bgSchedule = true;
+}
+
 // wrapper of "hashtable get"
 int HiKV::Get(const std::string& key, std::string* val) {
     kvObj srhKey(key, false);
@@ -67,28 +79,27 @@ int HiKV::Get(const std::string& key, std::string* val) {
 }
 //
 int HiKV::Put(const std::string& key, const std::string& val) {
+    tmr_all.start();
+    tmr_ht.start();
     kvObj* newKey = new kvObj(key, true);
     kvObj* value = new kvObj(val, true);
     KVPairFin* kv = new KVPairFin(newKey, value);
 #ifdef PM_WRITE_LATENCY_TEST
-    newKey->latency(true);
-    value->latency(true);
+    pflush((uint64_t*)newKey, newKey->size());
+    pflush((uint64_t*)value, value->size());
     pflush((uint64_t*)kv, sizeof(KVPairFin));
 #endif
     Dict::dictEntry* entryPointer = nullptr;
     if (ht_->Set(newKey, value, &entryPointer) == -1 || entryPointer == nullptr)
         return -1;
-
-    // tmr.start();
-    // auto cmd = new cmdInfo();
-    // cmd->type = kInsertType;
-    // cmd->key = nullptr;
-    // cmd->value = nullptr;
-    // cmd->ptr = (void*)kv;
+    auto cmd = new cmdInfo();
+    cmd->type = kInsertType;
+    cmd->key = nullptr;
+    cmd->value = nullptr;
+    cmd->ptr = (void*)kv;
     
-    // queue_push(cmd);
-    // tmr.stop();
-
+    queue_push(cmd);
+    tmr_ht.stop();
     return 0;
     
 }
@@ -97,6 +108,11 @@ int HiKV::Update(const std::string& key, const std::string& val) {
     kvObj* rpKey = new kvObj(key, false);
     kvObj* newVal = new kvObj(val, true);
     KVPairFin* kv = new KVPairFin(rpKey, newVal);
+#ifdef PM_WRITE_LATENCY_TEST
+    // pflush((uint64_t*)newKey, newKey->size());
+    pflush((uint64_t*)newVal, newVal->size());
+    pflush((uint64_t*)kv, sizeof(KVPairFin));
+#endif
     Dict::dictEntry* entryPointer = nullptr;
     if (ht_->Set(rpKey, newVal, &entryPointer) == -1 || entryPointer == nullptr)
         return -1;

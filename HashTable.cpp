@@ -157,7 +157,7 @@ Dict::dictEntry* Dict::Add(kvObj* key, kvObj* value, int* ret) {
     pflush((uint64_t*)(&table[idx]), sizeof(void*));
 #endif
 #endif
-    incrNode();
+    // incrNode();
     
     return newEntry;
 }
@@ -223,7 +223,7 @@ int Dict::Delete(const kvObj* key, int& bt) {
             }
             bt = tarEntry->idx;
             delete tarEntry;
-            decrNode();
+            // decrNode();
 
             return 0;
         }

@@ -13,7 +13,9 @@ namespace hybridKV {
 int BplusTreeList::Insert(KVPairFin* kv) {
     // std::string tmp_key(key);
     const uint8_t hash = PearsonHash(kv->key(), kv->keysize());
+    tmr_search.start();
     auto leafnode = leafSearch(kv->key());
+    tmr_search.stop();
     kv->setHash(hash);
     if (!leafnode) {    // need a new leafnode to accommodate kv pair
         ++leafCnt;
@@ -52,22 +54,41 @@ int BplusTreeList::Insert(KVPairFin* kv) {
 }
 
 bool BplusTreeList::leafFillSlotForKey(KVLeafNodeFin *leafnode, uint8_t hash, KVPairFin* kv) {
-    for (auto itor=leafnode->lst.begin(); itor != leafnode->lst.end(); ++itor) {
-        int m =strcmp((*itor).key.c_str(), kv->key());
-        if (m == 0) {
-             ++dupKeyCnt;
-            (*itor->ptr)->Update(kv->getVal());
-            kv->freeKey();
-            delete kv; // the KVPairFin is no longer needed.
-            return true;
-        } else if (m > 0) {
-            ++leafnode->cnt;
-            auto tmp = leafnode->leaf->lst.insert(itor->ptr, kv);
-            leafnode->lst.insert(itor, KVCachedNodeFin(hash, std::string(kv->key()), tmp));
-            //return true;
-            break;
+    tmr_insert.start();
+    if (strcmp(leafnode->lst.back().key.c_str(), kv->key()) < 0) {
+        ++leafnode->cnt;
+        auto itor = leafnode->leaf->lst.insert(leafnode->leaf->lst.end(), kv);
+        leafnode->lst.push_back(KVCachedNodeFin(hash, std::string(kv->key()), itor));
+    } else {
+        for (auto itor=leafnode->lst.begin(); itor != leafnode->lst.end(); ++itor) {
+            int m =strcmp((*itor).key.c_str(), kv->key());
+            if (m == 0) {
+                 ++dupKeyCnt;
+                (*itor->ptr)->Update(kv->getVal());
+#ifdef PM_WRITE_LATENCY_TEST
+                pflush((uint64_t*)((*itor->ptr)->getVal()), sizeof(void*));
+#endif
+                kv->freeKey();
+                delete kv; // the KVPairFin is no longer needed.
+                tmr_insert.stop();
+                return true;
+            } else if (m > 0) {
+                ++leafnode->cnt;
+                auto tmp = leafnode->leaf->lst.insert(itor->ptr, kv);
+#ifdef PM_WRITE_LATENCY_TEST
+                // 2 changed pointers for the list need to be persistent.
+                // It's hard to call pflush on std::list<>::iterator, so we just emulate the latency here.
+                // note we can implemet our own double-linked list to make it easier to pflush pointers.
+                emulate_latency_ns(800); 
+#endif
+                leafnode->lst.insert(itor, KVCachedNodeFin(hash, std::string(kv->key()), tmp));
+                // flag = true;
+                //return true;
+                break;
+            } 
         }
     }
+    tmr_insert.stop();
     if (leafnode->cnt == LEAF_KEYS_L+1) {
         return false;
     }
@@ -75,13 +96,14 @@ bool BplusTreeList::leafFillSlotForKey(KVLeafNodeFin *leafnode, uint8_t hash, KV
 }
     
 void BplusTreeList::leafSplitFull(KVLeafNodeFin *leafnode, KVPairFin* kv) {
+    tmr_split.start();
     ++leafSplitCnt;
     ++leafCnt;
     auto mid = leafnode->lst.begin();
-    std::advance(mid, LEAF_KEYS_UPPER_L);
-
+    std::advance(mid, LEAF_KEYS_MIDPOINT_L);
     std::string split_key = mid->key;
-    
+    std::advance(mid, 1);
+
     std::unique_ptr<KVLeafNodeFin> new_leafnode(new KVLeafNodeFin());
     new_leafnode->parent = leafnode->parent;
     new_leafnode->isLeaf = true;
@@ -124,15 +146,20 @@ void BplusTreeList::leafSplitFull(KVLeafNodeFin *leafnode, KVPairFin* kv) {
         new_leafnode->leaf = new_leaf;
         
         new_leaf->lst.splice(new_leaf->lst.begin(), leafnode->leaf->lst, mid->ptr, leafnode->leaf->lst.end());
+#ifdef PM_WRITE_LATENCY_TEST
+        emulate_latency_ns(1600);
+#endif
 
         new_leafnode->lst.splice(new_leafnode->lst.begin(), leafnode->lst, mid, leafnode->lst.end());
         leafnode->cnt = LEAF_KEYS_MIDPOINT_L+1;
         new_leafnode->cnt = LEAF_KEYS_MIDPOINT_L;
     
     }
+    tmr_split.stop();
     
+    tmr_inner.start();
     innerUpdateAfterSplit(leafnode, std::move(new_leafnode), &split_key);
-    
+    tmr_inner.stop();
 }
 
 KVLeafNodeFin* BplusTreeList::leafSearch(const char* key) {

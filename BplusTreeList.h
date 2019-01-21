@@ -20,6 +20,7 @@
 #include <cstring>
 #include <cassert>
 #include <deque>
+#include <unordered_map>
 
 #include "atomic_pointer.h"
 #include "DBInterface.h"
@@ -29,6 +30,25 @@
 #include "hyKV_def.h"
 #include "latency.hpp"
 #include "Thread.h"
+
+namespace std {
+    using namespace hybridKV;
+    // template specialization hash<kvObj*> and equal_to<kvObj*>, then offer them to unordered_map
+    template <>
+    class hash<kvObj*> {
+    public:
+        size_t operator()(const kvObj* k) const {
+            return smHasher(k->data(), k->size());
+        }
+    };
+    template <>
+    class equal_to<kvObj*> {
+    public:
+        bool operator()(const kvObj* x, const kvObj* y) const {
+            return std::strcmp(x->data(), y->data()) == 0;
+        }
+    };
+}
 namespace hybridKV {
 
 static const int INNER_KEYS_L = 4;
@@ -41,7 +61,11 @@ static const int LEAF_KEYS_UPPER_L = LEAF_KEYS_MIDPOINT_L + 1;
 // persistent
 class KVPairFin {
     public:
-        KVPairFin(kvObj* key, kvObj* val):hash_(0), key_(key), val_(val){}
+        KVPairFin(kvObj* key, kvObj* val):hash_(0), key_(key), val_(val){
+// #ifdef PM_WRITE_LATENCY_TEST
+//             pflush((uint64_t*)(this), sizeof(KVPairFin));
+// #endif
+        }
         ~KVPairFin() {}
         uint8_t hash() { return hash_; }
         const char* key() const { return key_->data(); }
@@ -109,9 +133,8 @@ struct KVLeafNodeFin : KVNodeFin {
     uint8_t cnt;
     std::list<KVCachedNodeFin> lst;
     std::shared_ptr<KVLeafFin> leaf;
-#ifdef NEED_SCAN
     KVLeafNodeFin* next;
-#endif
+
 };
 
 //#ifdef HiKV_TEST
@@ -135,10 +158,17 @@ struct KVLeafNodeFin : KVNodeFin {
 //     }
 // }
 
+struct btCmdNode {
+    cmdType type;
+    void* key;
+    void* val;
+    void* ptr;
+};
+
 class BplusTreeList {
 public:
     typedef std::deque<btCmdNode*>::reference QREF;
-    BplusTreeList(int idx):index(idx), dupKeyCnt(0), leafSplitCmp(0), leafCmpCnt(0), leafSplitCnt(0), innerUpdateCnt(0), leafCnt(0), leafSearchCnt(0), depth(0) {};
+    BplusTreeList(int idx):index(idx), skewLeafCnt(0), dupKeyCnt(0), leafSplitCmp(0), leafCmpCnt(0), leafSplitCnt(0), innerUpdateCnt(0), leafCnt(0), leafSearchCnt(0), depth(0) {};
     ~BplusTreeList(){};
 
     int WriteBatch(std::vector<btCmdNode>& batch);
@@ -151,24 +181,24 @@ public:
     }
     int Delete(const kvObj* key) ;
     int Get(const std::string& key, std::string* val);
-#ifdef NEED_SCAN
+
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
 
     int Scan(const kvObj* beginKey, int n, scanRes* r);
     int Scan(const kvObj* beginKey, const kvObj* lastKey, scanRes* r);
-#endif
     // int Update(const std::string& key, const std::string& val); // update is in Insert();
     
     // Interfaces used to handle banckground request.
     void cmd_push(btCmdNode* tdNode) {
+
         mtx_.Lock();
-        auto res = mp.find(tdNode->key);
+        auto res = mp.find((kvObj*)tdNode->key);
         if (res!= mp.end()) {
-            res->second.val = tdNode->val;
+            res->second->val = tdNode->val;
         } else {
             cmdQue.push_back(tdNode);
-            mp.insert((kvObj*)tdNode->key, cmdQue.back());
+            mp.insert({(kvObj*)tdNode->key, cmdQue.back()});
         }
         mtx_.unLock();
     }
@@ -187,6 +217,12 @@ public:
     bool emptyQue() {
         return cmdQue.empty();
     }
+    void clock() {
+        tmr.start();
+    }
+    hrtime_t timer() {
+        return tmr.lastTime();
+    }
     // Test use.
     int leafSplitCmp;
     int leafCmpCnt;
@@ -196,8 +232,8 @@ public:
     int innerUpdateCnt;
     int depth;
     int dupKeyCnt;
-
-
+    int skewLeafCnt;
+    TimerRDT tmr, tmr_insert, tmr_search, tmr_inner, tmr_split;
 protected:
     // inside methods including "search leafnode" / "leaf split" / "leaf insert" / "recursively inner node update".
     KVLeafNodeFin* leafSearch(const char* key);
@@ -210,8 +246,10 @@ protected:
 private:
     uint8_t index; // sequence number of this Bplus Tree.
     Mutex mtx_;
+    // bool toFlush;
+    // TimerRDT tmr, tmr_cp;
     std::deque<btCmdNode*> cmdQue;
-    std::unordered_map<kvObj* key, QREF ref, > mp;  
+    std::unordered_map<kvObj*, QREF> mp;  
     std::unique_ptr<KVNodeFin> root; // root node of the B+tree
     std::shared_ptr<KVLeafFin> head; // list head of leaf. All leafs are in one list. 
 };

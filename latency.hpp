@@ -21,6 +21,7 @@ public:
 	void start();
 	void stop();
 	void setZero();
+	hrtime_t lastTime(); 
 	hrtime_t getDuration();
 private:
     hrtime_t lastTime_;

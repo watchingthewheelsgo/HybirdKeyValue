@@ -33,8 +33,8 @@ public:
     { return 0; }
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) final;
     int Update(const std::string& key, const std::string& val) final;
-    uint64_t time() {
-        return 0;
+    void newRound() {
+        
     }
     // void debug() {
     //     tree_->showAll();

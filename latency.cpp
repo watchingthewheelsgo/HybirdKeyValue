@@ -146,7 +146,7 @@ void TimerRDT::setZero() {
     duration_ = 0;
 }
 
-TimerRDT::TimerRDT() : duration_(0) {
+TimerRDT::TimerRDT() : duration_(0), lastTime_(0) {
 
 }
 TimerRDT::~TimerRDT(){ }
@@ -158,7 +158,9 @@ void TimerRDT::stop() {
     hrtime_t now = asm_rdtscp();
     duration_ += cycles_to_ns(global_cpu_speed_mhz, now - lastTime_);
 }
-
+hrtime_t TimerRDT::lastTime() {
+    return lastTime_;
+}
 hrtime_t TimerRDT::getDuration() {
     // std::cout << "Time consuming " << duration_ / 1000 << " (us)"<< std::endl;
     return duration_/1000;

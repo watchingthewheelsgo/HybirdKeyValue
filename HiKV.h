@@ -24,7 +24,6 @@
 #include "latency.hpp"
 
 namespace hybridKV {
-#ifdef HiKV_TEST
 void* schedule2(void* arg);
 	
 struct cmdInfo {
@@ -36,7 +35,7 @@ struct cmdInfo {
 
 class HiKV : public hyDB {
 public:
-	typedef std::deque::iterator QITOR;
+	// typedef std::deque::iterator QITOR;
 	HiKV();
 	~HiKV(){};
 	
@@ -50,7 +49,7 @@ public:
 	int Update(const std::string& key, const std::string& val);
 	static void BGWork(void* db);
 	void BgInit();
-	
+	void newRound();
 	int Recover();
 	int Close();
 	bool emptyQue() {
@@ -74,10 +73,10 @@ public:
 	// void debug() {
 	//     tree_->showAll();
 	// }
-	uint64_t time() {
-		return tmr.getDuration();
-	}
-	TimerRDT tmr;
+	TimerRDT tmr_ht;
+	TimerRDT tmr_all;
+	bool bgSchedule;
+
 private:
 	uint32_t flushTh;
 	Config* cfg;
@@ -85,11 +84,11 @@ private:
 	std::deque<cmdInfo*> que;
 	BplusTreeList* tree_;
 	HashTable* ht_;
+
 	// ThreadPool* thrds;
 	std::vector<std::thread> th;
 	
 };
-#endif
 }
 
 

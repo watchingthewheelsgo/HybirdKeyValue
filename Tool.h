@@ -22,7 +22,7 @@ typedef signed long long    int64_t;
 typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
 typedef unsigned int        uint32_t;
-typedef unsigned long long  uint64_t;
+typedef unsigned long       uint64_t;
     
 const bool debug_on = true;
     
@@ -31,7 +31,8 @@ enum cmdType{
     kUpdateType = 0x1,
     kInsertType = 0x2,
     kScanNorType = 0x3,
-    kScanNumType = 0x4
+    kScanNumType = 0x4,
+    kFlushType = 0x5
 };
 typedef leveldb::port::AtomicPointer AtomicPointer;
 class scanRes {

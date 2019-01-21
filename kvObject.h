@@ -33,9 +33,6 @@ public:
             char* buf = new char [size_];
             memcpy(buf, s.data(), size_);
             data_ = buf;
-#ifdef PM_WRITE_LATENCY_TEST
-            pflush((uint64_t*)data_, size_);
-#endif
         } else {
             data_ = s.data();
         }
@@ -48,9 +45,7 @@ public:
             memcpy(buf, dt, size_);
             // buf[size_] = '\0';
             data_ = buf;
-#ifdef PM_WRITE_LATENCY_TEST
-            pflush((uint64_t*)data_, size_);
-#endif
+
         } else {
             data_ = dt;
         }
@@ -60,15 +55,15 @@ public:
         if (nvm_allocated)
             delete [] data_;
     }
-    inline void latency(bool op_write) const {
-        if (nvm_allocated) {
-            if (op_write) {
-                pflush((uint64_t*)(data_), size_);
-            } else {
-                pload((uint64_t*)(data_), size_);
-            }
-        }
-    }
+    // inline void latency(bool op_write) const {
+    //     if (nvm_allocated) {
+    //         if (op_write) {
+    //             pflush((uint64_t*)(data_), size_);
+    //         } else {
+    //             pload((uint64_t*)(data_), size_);
+    //         }
+    //     }
+    // }
 //    void addRef() { ++ref; }
     size_t size() const { return size_; }
     const char* data() const { return data_; }
