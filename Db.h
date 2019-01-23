@@ -33,12 +33,14 @@ public:
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
     int Update(const std::string& key, const std::string& val);
+    // void rdStartSignal();
+    // void rdStopSignal();
     void signalBG();
     // void newRound();
     static void BGWork(void* db);
-    void newRound() {
+    // void newRound() {
         
-    }
+    // }
     void BgInit();
     void waitBGWork();
 

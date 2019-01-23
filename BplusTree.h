@@ -166,11 +166,13 @@ public:
     //general interfaces provided by BplustreeSplit
     int Insert(kvObj* key, kvObj* val);
     int Delete(const std::string& key);
+    int Delete(kvObj* key);
     int Get(const std::string& key, std::string* val);
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
     int Update(kvObj* key, kvObj* val);
-
+    // to measure BG time consumption.
+    TimerRDT tmr;
 protected:
     KVLeafNodeSplit* leafSearch(const char* key);
     uint8_t PearsonHash(const char* data, const size_t size);
@@ -183,6 +185,7 @@ protected:
  
     
 private:
+    
     std::unique_ptr<KVNodeSplit> root; // root node of the B+tree
     std::shared_ptr<KVLeafSplit> head; // list head of leafnodes.
 

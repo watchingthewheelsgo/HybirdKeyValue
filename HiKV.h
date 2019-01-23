@@ -11,12 +11,15 @@
 #include <string>
 #include <vector>
 #include <deque>
-
+#include <mutex>
+#include <boost/lockfree/spsc_queue.hpp>
+#include <boost/atomic.hpp>
+// #include <boost>
 #include "HashTable.h"
 #include "kvObject.h"
 #include "Configure.h"
 #include "DBInterface.h"
-#include "BplusTreeList.h"
+#include "BplusTree.h"
 #include "Thread.h"
 #include "Tool.h"
 // #include "Timer.h"
@@ -48,26 +51,49 @@ public:
 	int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
 	int Update(const std::string& key, const std::string& val);
 	static void BGWork(void* db);
+	void clearBGTime() {
+		tree_->tmr.setZero();
+	}
+	uint64_t getBGTime() {
+		return tree_->tmr.getDuration();
+	}
 	void BgInit();
-	void newRound();
+	// void newRound();
 	int Recover();
 	int Close();
 	bool emptyQue() {
 		return que.empty();
 	}
-	void queue_push(cmdInfo* cmd) {
-		mt_.Lock();
-		que.push_back(cmd);
-		mt_.unLock();
+	int queSize() {
+		return qSize;
+		// return qSize.load();
 	}
-	cmdInfo* extraQue() {
-		mt_.Lock();
-		auto res = que.front();
-		que.pop_front();
-		mt_.unLock();
+	void freePush(cmdInfo* cmd) {
+		que2.push(cmd);
+		++qSize;
+	}
+	cmdInfo* freePop() {
+		cmdInfo* res;
+		// auto res = que2.front();
+		que2.pop(res);
+		--qSize;
 		return res;
 	}
-	BplusTreeList* tree() {
+	void queue_push(cmdInfo* cmd) {
+		mt_.lock();
+		que.push_back(cmd);
+		++qSize;
+		mt_.unlock();
+	}
+	cmdInfo* extraQue() {
+		mt_.lock();
+		auto res = que.front();
+		que.pop_front();
+		--qSize;
+		mt_.unlock();
+		return res;
+	}
+	BplusTreeSplit* tree() {
 		return tree_;
 	}
 	// void debug() {
@@ -76,17 +102,22 @@ public:
 	TimerRDT tmr_ht;
 	TimerRDT tmr_all;
 	bool bgSchedule;
+	// static int cnt;
+	
 
 private:
-	uint32_t flushTh;
 	Config* cfg;
 	Mutex mt_;
+	// std::mutex mt_;
 	std::deque<cmdInfo*> que;
-	BplusTreeList* tree_;
+	boost::lockfree::spsc_queue<cmdInfo*, boost::lockfree::capacity<1 << 21>> que2;
+	// boost::atomic<bool> done;
+	// std::atomic<int> qSize;
+	volatile int qSize; // que.size() is not safe when using -O2 opt, just use 'volatile' to gurantee consistancy 
+	BplusTreeSplit* tree_;
 	HashTable* ht_;
-
-	// ThreadPool* thrds;
-	std::vector<std::thread> th;
+	ThreadPool* thrds;
+	// std::vector<std::thread> th;
 	
 };
 }

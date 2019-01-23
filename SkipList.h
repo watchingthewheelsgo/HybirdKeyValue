@@ -87,16 +87,16 @@ class SkipList {
     }
 
     void cmd_push(void *tdNode) {
-        mtx_.Lock();
+        mtx_.lock();
         cmdQue.push_back((slCmdNode*)tdNode);
-        mtx_.unLock();
+        mtx_.unlock();
     }
     // only be called when cmdQue is not empty
     slCmdNode* extractCmd() {
-        mtx_.Lock();
+        mtx_.lock();
         slCmdNode* cmd = cmdQue.front();
         cmdQue.pop_front();
-        mtx_.unLock();
+        mtx_.unlock();
         return cmd;
     }
 

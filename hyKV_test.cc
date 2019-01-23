@@ -327,7 +327,7 @@ void testBplusTreeList(int num, int keyIdx) {
                 auto v_obj_wr = new kvObj(vl, true);
                 // auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
 #ifdef PM_WRITE_LATENCY_TEST
-                pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
+                // pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
                 pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
                 // pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
 #endif
@@ -828,7 +828,7 @@ void dataStructureTest() {
 void ycsbTest() {
 
 }
-std::string day = "118";
+std::string day = "01_23";
 std::string fname = "/home/why/log";
 void microBench(int num, int keyIdx, const std::string& name) {
     // std::string fname = "/home/why/log"
@@ -844,7 +844,7 @@ void microBench(int num, int keyIdx, const std::string& name) {
     fprintf(logFd, "PM Read latency = %d ns\n", pm_latency_read);
     LOG("PM RD latency = "<< pm_latency_read);
 #endif
-    hyDB* db=nullptr;
+    // hyDB* db=nullptr;
     int bgNums = 0;
     if (name == "myKV") {
         std::cout << "Input the BG Btrees you want to create: ";
@@ -852,7 +852,9 @@ void microBench(int num, int keyIdx, const std::string& name) {
         assert(bgNums > 0 && bgNums < 10);
     }
 
-    hyDB::Open(&db, name, bgNums);
+    // hyDB::Open(&db, name, bgNums);
+    HiKV* db = new HiKV();
+    HiKV::BGWork(reinterpret_cast<void*>(db));
 
     if (db == nullptr)
         LOG("Failed to open db: "<< name);
@@ -870,7 +872,7 @@ void microBench(int num, int keyIdx, const std::string& name) {
 
     TimerRDT tmr_load, tmr_idle;
     TimerRDT tmr_all;
-    db->newRound();
+    // db->newRound();
     for (int i=1; i<nums+1; ++i) {
         if (keyIdx == 3)
             keySize = keyLens[random() % 3];
@@ -912,15 +914,18 @@ void microBench(int num, int keyIdx, const std::string& name) {
             }
             fprintf(logFd, "Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
             printf("Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
-            db->newRound();
+            // db->newRound();
         }
 
 
     }
-
+    LOG("Wait for BG working...");
+    while (db->queSize() != 0);
+    LOG("B+Tree finished.");
     fprintf(logFd, "Loading %dM KV pair finished.\n", nums/mbi);
     printf("Loading %dM KV pair finished.\n", nums/mbi);
-
+    printf("HT time consume %d us, BTree time consume %d us.\n", tmr_load.getDuration()- tmr_idle.getDuration(), db->getBGTime()-tmr_idle.getDuration());
+    db->clearBGTime();
     while (true) {
         std::cout << "Choose Options: 1-Insert x(M), 2-Get x(M), 3-Delete x(M), 4-Update x(M), 5-scan, 6-Quit" <<std::endl;
         int op, sz; 
@@ -941,9 +946,12 @@ void microBench(int num, int keyIdx, const std::string& name) {
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
-            
+            LOG("Wait for BG working...");
+            while (db->queSize() != 0);
+            LOG("B+Tree finished.");
             fprintf(logFd, "Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());   
             printf("Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());         
+            printf("BGTree insert takes time %d (us).\n", db->getBGTime()-tmr_idle_op.getDuration());
             nums+=sz*mbi;
             printf("DB Size = %dM\n", nums / mbi);
         } else if (op == 2) {
@@ -988,7 +996,7 @@ void microBench(int num, int keyIdx, const std::string& name) {
                 auto vl = randomString(valLength);
 
                 tmr_op.start();
-                db->Put(ky, vl);
+                db->Update(ky, vl);
                 tmr_op.stop();
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
@@ -1082,8 +1090,8 @@ int main(int argc, char** argv) {
         }
     }
     init_pflush(cpu_speed_mhz, pm_latecny_write, pm_latency_read);
-    dataStructureTest();
-    // kvStoreTest();
+    // dataStructureTest();
+    kvStoreTest();
     return 0;
 
 

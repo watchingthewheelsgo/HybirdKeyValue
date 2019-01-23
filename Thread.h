@@ -51,10 +51,10 @@ public:
  	~Mutex() {
         pthread_mutex_destroy(&mtx);
  	}
- 	void Lock() {
+ 	void lock() {
  		pthread_mutex_lock(&mtx);
  	}
- 	void unLock() {
+ 	void unlock() {
  		pthread_mutex_unlock(&mtx);
  	}
 

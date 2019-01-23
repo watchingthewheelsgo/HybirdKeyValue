@@ -14,8 +14,10 @@ void KVPairSplit::clear() {
     hash_ = 0;
     key_ = nullptr;
     val_ = nullptr;
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
     pflush((uint64_t*)(this), sizeof(KVPair));
+#endif
 #endif
 }
 
@@ -23,8 +25,10 @@ void KVPairSplit::Set(const uint8_t hash, kvObj* key, kvObj* val) {
     hash_ = hash;
     key_ = key;
     val_ = val;
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
     pflush((uint64_t*)(this), sizeof(KVPair));
+#endif
 #endif
 }
     
@@ -34,8 +38,10 @@ void KVPair::clear() {
     ksize_ = 0;
     vsize_ = 0;
     kv = nullptr;
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
     pflush((uint64_t*)(this), sizeof(KVPair));
+#endif
 #endif
 }
 void KVPair::Set(const uint8_t hash, const std::string& key, const std::string& value) {
@@ -50,15 +56,18 @@ void KVPair::Set(const uint8_t hash, const std::string& key, const std::string& 
     ch += ksize_+1;
     memcpy(ch, value.data(), vsize_);
     kv[ksize_ + vsize_ + 1] = '\0';
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
     pflush((uint64_t*)(kv), ksize_+vsize_+1);
     pflush((uint64_t*)(this), sizeof(KVPair));
+#endif
 #endif
 }
 // methods of BplusTree
     
 int BplusTreeSplit::Insert(kvObj* k, kvObj* v) {
     // std::string tmp_key(key);
+    // LOG("Ins");
     const char* key = k->data();
     size_t size = k->size();
     const uint8_t hash = PearsonHash(key, size);
@@ -70,17 +79,21 @@ int BplusTreeSplit::Insert(kvObj* k, kvObj* v) {
         new_node->isLeaf = true;
         
         auto new_leaf = std::make_shared<KVLeafSplit>();
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeafSplit));
+#endif
 #endif
         // since there is no existing leafnode, just replace the head and mark its inner node the root.
         auto old_head = head;
         head = new_leaf;
         new_leaf->next = old_head.get();
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)(&head), sizeof(void*));
         pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
 #endif    
+#endif
         new_node->leaf = new_leaf;
 
         leafFillSpecificSlot(new_node.get(), hash, k, v, 0);
@@ -96,6 +109,7 @@ int BplusTreeSplit::Insert(kvObj* k, kvObj* v) {
 }
 
 int BplusTreeSplit::Update(kvObj* key, kvObj* val) {
+    // LOG("Up");
     return Insert(key, val);
 }
 void BplusTreeSplit::leafFillEmptySlot(KVLeafNodeSplit* leafnode, const uint8_t hash, kvObj* key, kvObj* val) {
@@ -178,8 +192,10 @@ void BplusTreeSplit::leafSplitFull(KVLeafNodeSplit *leafnode, const uint8_t hash
     {
         //        std::shared_ptr<KVLeaf> new_leaf(new KVLeaf());
         auto new_leaf = std::make_shared<KVLeafSplit>();
+#ifndef HiKV_TEST
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeafSplit));
+#endif
 #endif
         
         auto next_leaf = leafnode->leaf->next;
@@ -191,9 +207,10 @@ void BplusTreeSplit::leafSplitFull(KVLeafNodeSplit *leafnode, const uint8_t hash
         new_leaf->next = next_leaf;
         leafnode->next = new_leafnode.get();
         
-   
+#ifndef HiKV_TEST  
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
+#endif
 #endif
 
         new_leafnode->leaf = new_leaf;
@@ -332,6 +349,28 @@ int BplusTreeSplit::Scan(const std::string& beginKey, const std::string& lastKey
 //     }
     return 0;
 }
+int BplusTreeSplit::Delete(kvObj* k) {
+    // LOG("Delete Key" << key.c_str());
+    const char* key = k->data();
+    auto leafnode = leafSearch(key);
+    
+    if (!leafnode) {
+        return -1;
+    }
+    const uint8_t hash = PearsonHash(key, k->size());
+    for (int slot = LEAF_KEYS; slot--;) {
+        if (leafnode->hashes[slot] == hash) {
+            if (strcmp(leafnode->keys[slot].c_str(), key) == 0) {
+                leafnode->hashes[slot] = 0;
+                leafnode->keys[slot].clear();
+                auto leaf = leafnode->leaf;
+                leaf->slots[slot]->clear();
+            }
+            break;
+        }
+    }
+    return 0;
+}
 
 int BplusTreeSplit::Delete(const std::string& key) {
     // LOG("Delete Key" << key.c_str());
@@ -365,9 +404,11 @@ int BplusTreeSplit::Get(const std::string& key, std::string* val) {
                 if (strcmp(leafnode->keys[slot].c_str(), key.c_str()) == 0) {
                     auto kv = leafnode->leaf->slots[slot].get();
                     val->append(kv->val());
+#ifndef HiKV_TEST
 #ifdef PM_READ_LATENCY_TEST
                     pload((uint64_t*)(kv), sizeof(KVPair));
                     pload((uint64_t*)(kv->val()), (size_t)kv->valsize());
+#endif
 #endif
                     return 0;
                 }

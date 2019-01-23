@@ -149,13 +149,13 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     return 0;
 }
 void DBImpl::signalBG() {
-    btCmdNode* node = new btCmdNode;
-    node->type = kFlushType;
-    for (int i=0; i<bt_size; ++i) {
-        bt_grp[i]->cmd_push(node);
-    }
-    delete node;
-    return;
+//     btCmdNode* node = new btCmdNode;
+//     node->type = kFlushType;
+//     for (int i=0; i<bt_size; ++i) {
+//         bt_grp[i]->cmd_push(node);
+//     }
+//     delete node;
+//     return;
 }
 int DBImpl::Delete(const std::string& key) {
     
@@ -317,9 +317,9 @@ void* schedule(void* arg) {
                     // assert(curBT->emptyQue());
                     res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
                     break;
-                case kFlushType:
-                    // curBT->clock();
-                    break;
+                // case kFlushType:
+                //     // curBT->clock();
+                //     break;
                 default:
                     LOG("unKnown cmd type");
                     res = -1;

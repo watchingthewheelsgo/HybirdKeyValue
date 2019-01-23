@@ -32,7 +32,8 @@ enum cmdType{
     kInsertType = 0x2,
     kScanNorType = 0x3,
     kScanNumType = 0x4,
-    kFlushType = 0x5
+    kRoundStart = 0x5, 
+    kRoundStop = 0x6
 };
 typedef leveldb::port::AtomicPointer AtomicPointer;
 class scanRes {

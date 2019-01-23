@@ -33,9 +33,12 @@ public:
     { return 0; }
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) final;
     int Update(const std::string& key, const std::string& val) final;
-    void newRound() {
+    // void rdStartSignal() {
+
+    // }
+    // void rdStopSignal() {
         
-    }
+    // }
     // void debug() {
     //     tree_->showAll();
     // }

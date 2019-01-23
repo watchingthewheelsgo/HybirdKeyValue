@@ -10,7 +10,7 @@
 #define hyKV_def_h
 
 #define NEED_SCAN
-#define HiKV_TEST
+// #define HiKV_TEST
 
 #define PM_WRITE_LATENCY_TEST
 //#define PM_READ_LATENCY_TEST

@@ -194,7 +194,7 @@ public:
     // Interfaces used to handle banckground request.
     void cmd_push(btCmdNode* tdNode) {
 
-        mtx_.Lock();
+        mtx_.lock();
         auto res = mp.find((kvObj*)tdNode->key);
         if (res!= mp.end()) {
             res->second->val = tdNode->val;
@@ -202,15 +202,15 @@ public:
             cmdQue.push_back(tdNode);
             mp.insert({(kvObj*)tdNode->key, cmdQue.back()});
         }
-        mtx_.unLock();
+        mtx_.unlock();
     }
     // only be called when cmdQue is not empty
     btCmdNode* extractCmd() {
-        mtx_.Lock();
+        mtx_.lock();
         btCmdNode* cmd = cmdQue.front();
         mp.erase((kvObj*)cmd->key);
         cmdQue.pop_front();
-        mtx_.unLock();
+        mtx_.unlock();
         return cmd;
     }
     void Geo();
