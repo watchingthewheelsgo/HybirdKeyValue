@@ -318,7 +318,7 @@ void* schedule(void* arg) {
                     res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
                     break;
                 case kFlushType:
-                    curBT->clock();
+                    // curBT->clock();
                     break;
                 default:
                     LOG("unKnown cmd type");

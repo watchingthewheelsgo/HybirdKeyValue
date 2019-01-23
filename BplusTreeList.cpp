@@ -54,14 +54,20 @@ int BplusTreeList::Insert(KVPairFin* kv) {
 }
 
 bool BplusTreeList::leafFillSlotForKey(KVLeafNodeFin *leafnode, uint8_t hash, KVPairFin* kv) {
+    bool flag = false;
     tmr_insert.start();
     if (strcmp(leafnode->lst.back().key.c_str(), kv->key()) < 0) {
         ++leafnode->cnt;
+        tmr_cache.start();
         auto itor = leafnode->leaf->lst.insert(leafnode->leaf->lst.end(), kv);
         leafnode->lst.push_back(KVCachedNodeFin(hash, std::string(kv->key()), itor));
+        tmr_cache.stop();
+        ++pushBackCnt;
+        flag = true;
     } else {
         for (auto itor=leafnode->lst.begin(); itor != leafnode->lst.end(); ++itor) {
-            int m =strcmp((*itor).key.c_str(), kv->key());
+            ++leafCmpCnt;
+            int m =memcmp((*itor).key.c_str(), kv->key(), kv->keysize());
             if (m == 0) {
                  ++dupKeyCnt;
                 (*itor->ptr)->Update(kv->getVal());
@@ -74,21 +80,26 @@ bool BplusTreeList::leafFillSlotForKey(KVLeafNodeFin *leafnode, uint8_t hash, KV
                 return true;
             } else if (m > 0) {
                 ++leafnode->cnt;
+                tmr_cache.start();
                 auto tmp = leafnode->leaf->lst.insert(itor->ptr, kv);
 #ifdef PM_WRITE_LATENCY_TEST
                 // 2 changed pointers for the list need to be persistent.
                 // It's hard to call pflush on std::list<>::iterator, so we just emulate the latency here.
                 // note we can implemet our own double-linked list to make it easier to pflush pointers.
+                // But, why not std::list and emulate write latency, right?
                 emulate_latency_ns(800); 
 #endif
                 leafnode->lst.insert(itor, KVCachedNodeFin(hash, std::string(kv->key()), tmp));
-                // flag = true;
+                tmr_cache.stop();
+                flag = true;
                 //return true;
                 break;
             } 
         }
     }
     tmr_insert.stop();
+    if (!flag)
+        ++skewLeafCnt;
     if (leafnode->cnt == LEAF_KEYS_L+1) {
         return false;
     }
@@ -115,9 +126,7 @@ void BplusTreeList::leafSplitFull(KVLeafNodeFin *leafnode, KVPairFin* kv) {
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)(new_leaf.get()), sizeof(KVLeafFin));
 #endif
-        
-#ifdef NEED_SCAN
-        
+              
         auto next_leaf = leafnode->leaf->next;
         auto next_leafnode = leafnode->next;
         
@@ -127,21 +136,10 @@ void BplusTreeList::leafSplitFull(KVLeafNodeFin *leafnode, KVPairFin* kv) {
         new_leaf->next = next_leaf;
         leafnode->next = new_leafnode.get();
         
-#else
-        auto old_head = head;
-        //        auto new_leaf = std::make_shared<KVLeaf>(new KVLeaf);
-        head = new_leaf;
-
-#ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)(&head), sizeof(void*));
-#endif
-        new_leaf->next = old_head.get();
-#endif  
    
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)(&new_leaf->next), sizeof(void*));
 #endif
-
 
         new_leafnode->leaf = new_leaf;
         
@@ -161,18 +159,86 @@ void BplusTreeList::leafSplitFull(KVLeafNodeFin *leafnode, KVPairFin* kv) {
     innerUpdateAfterSplit(leafnode, std::move(new_leafnode), &split_key);
     tmr_inner.stop();
 }
+void BplusTreeList::Geo() {
+    int max=0, min = LEAF_KEYS_L;
+    int sum = 0;
+    int leafcnt;
+    auto itor = head.get();
+    while (itor != nullptr) {
+        int x = itor->lst.size();
+        max = std::max(max, x);
+        min = std::min(min, x);
+        sum += x;
+        itor = itor->next;
+    }
+    LOG("There are " << leafcnt << " leafs. " << "Most "<< max << " nodes, Min " << min << " nodes. Sum is " << sum);
+}
+bool BplusTreeList::sortedLeaf() {
+    auto itor = head.get();
+    while (itor != nullptr) {
+        auto tar = itor->lst;
+        if (tar.empty())
+            continue;
+        auto f1 = tar.begin();
+        auto f2 = f1;
+        std::advance(f2, 1);
+        while (f2 != tar.end()) {
+            if (strcmp((*f1)->key(), (*f2)->key()) > 0)
+                return false;
+            std::advance(f1, 1);
+            std::advance(f2, 1);
+        }
+        itor = itor->next;
+    }
+    return true;
+}
+void BplusTreeList::printLeafnode(const std::string& key) {
+    auto leafnode = leafSearch(key.c_str());
+    LOG("search for: " << key);
+    for (auto &i:leafnode->lst) {
+        LOG("key:"<< i.key);
+    }
+}
+void BplusTreeList::printNoLeaf(int x) {
+    auto itor = head.get();
+    while (itor != nullptr && x-- != 0)  itor=itor->next;
 
+    for (auto &i:itor->lst) {
+        LOG("key:"<< i->key());
+    }
+    // auto parent = (KVInnerNodeFin*)itor->parent;
+    // LOG("Piovt keys: ");
+    // for (int i=0; i<parent->keyCount; ++i)
+    //     LOG(parent->keys[i]);
+
+}
 KVLeafNodeFin* BplusTreeList::leafSearch(const char* key) {
     ++leafSearchCnt;
     KVNodeFin* node = root.get();
     if (node == nullptr) return nullptr;
     bool matched;
     int height = 0;
+    std::string k(key);
+    // while (!node->isLeaf) {
+    //     ++height;
+    //     ++logCmpCnt;
+    //     auto inner = (KVInnerNodeFin*) node;
+    //     const uint8_t keycount = inner->keyCount;
+    //     // for (int i=0; i<keycount; ++i)
+    //         // LOG(inner->keys[i]);
+    //     tmr_log.start();
+    //     auto lower = std::lower_bound(inner->keys.begin(), inner->keys.begin()+keycount, k);
+    //     int dist = std::distance(inner->keys.begin(), lower);
+    //     tmr_log.stop();
+    //     node = inner->children[dist].get();
+    // }
     while (!node->isLeaf) {
         ++height;
+        ++logCmpCnt;
         matched = false;
         auto inner = (KVInnerNodeFin*) node;
         const uint8_t keycount = inner->keyCount;
+        tmr_log.start();
         for (uint8_t idx = 0; idx<keycount; ++idx) {
             node = inner->children[idx].get();
             if (strcmp(key, inner->keys[idx].c_str()) <= 0) {
@@ -180,6 +246,7 @@ KVLeafNodeFin* BplusTreeList::leafSearch(const char* key) {
                 break;
             }
         }
+        tmr_log.stop();
         if (!matched) node = inner->children[keycount].get();
     }
     if (depth < height)
@@ -191,7 +258,7 @@ KVLeafNodeFin* BplusTreeList::leafSearch(const char* key) {
 // so the new one must has a inner node to index it
 void BplusTreeList::innerUpdateAfterSplit(KVNodeFin* node, std::unique_ptr<KVNodeFin> new_node, std::string* split_key) {
     // no inner node yet
-    ++innerUpdateCnt;
+    // ++innerUpdateCnt;
     if (!node->parent) {
         auto top = std::make_unique<KVInnerNodeFin>();
         top->keyCount = 1;
@@ -383,13 +450,15 @@ int BplusTreeList::Get(const std::string& key, std::string* val) {
     auto leafnode = leafSearch(key.c_str());
     if (leafnode) {
         const uint8_t hash = PearsonHash(key.c_str(), key.size());
-        for (auto itor=leafnode->lst.rbegin(); itor!=leafnode->lst.rend(); ++itor) {
+        for (auto itor=leafnode->lst.begin(); itor!=leafnode->lst.end(); ++itor) {
             if (itor->hash == hash) {
-                int x=strcmp(itor->key.c_str(), key.c_str());
+                ++leafCmpCnt;
+                int x=itor->key.compare(key);
                 if (x==0) {
                     val->assign((*itor->ptr)->val());
                     return 0;
                 } else if (x > 0) {
+                    ++notFoundCnt;
                     return -1;
                 }
             }

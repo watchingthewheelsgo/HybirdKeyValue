@@ -54,7 +54,7 @@ namespace hybridKV {
 static const int INNER_KEYS_L = 4;
 static const int INNER_KEYS_MIDPOINT_L = (INNER_KEYS_L / 2);
 static const int INNER_KEYS_UPPER_L = INNER_KEYS_MIDPOINT_L + 1;
-static const int LEAF_KEYS_L = 8;
+static const int LEAF_KEYS_L = 48;
 static const int LEAF_KEYS_MIDPOINT_L = LEAF_KEYS_L / 2;
 static const int LEAF_KEYS_UPPER_L = LEAF_KEYS_MIDPOINT_L + 1;
 
@@ -113,8 +113,10 @@ struct KVNodeFin {
 };
 // volatile
 struct KVInnerNodeFin : KVNodeFin {
+    KVInnerNodeFin():keyCount(0), keys(INNER_KEYS_L + 1) { }
     uint8_t keyCount;
-    std::string keys[INNER_KEYS_L + 1];
+    // std::string keys[INNER_KEYS_L + 1];
+    std::vector<std::string> keys;
     std::unique_ptr<KVNodeFin> children[INNER_KEYS_L + 2];
 };
 // volatile
@@ -168,7 +170,7 @@ struct btCmdNode {
 class BplusTreeList {
 public:
     typedef std::deque<btCmdNode*>::reference QREF;
-    BplusTreeList(int idx):index(idx), skewLeafCnt(0), dupKeyCnt(0), leafSplitCmp(0), leafCmpCnt(0), leafSplitCnt(0), innerUpdateCnt(0), leafCnt(0), leafSearchCnt(0), depth(0) {};
+    BplusTreeList(int idx):index(idx), logCmpCnt(0), notFoundCnt(0), skewLeafCnt(0), pushBackCnt(0), dupKeyCnt(0), leafSplitCmp(0), leafCmpCnt(0), leafSplitCnt(0), innerUpdateCnt(0), leafCnt(0), leafSearchCnt(0), depth(0) {};
     ~BplusTreeList(){};
 
     int WriteBatch(std::vector<btCmdNode>& batch);
@@ -211,17 +213,34 @@ public:
         mtx_.unLock();
         return cmd;
     }
+    void Geo();
+    bool sortedLeaf();
+    void printLeafnode(const std::string& key);
+    void printNoLeaf(int x);
     int busyCnt() {
         return cmdQue.size();
     }
     bool emptyQue() {
         return cmdQue.empty();
     }
-    void clock() {
-        tmr.start();
-    }
-    hrtime_t timer() {
-        return tmr.lastTime();
+    void setZero() {
+        leafSplitCmp = 0;
+        leafCmpCnt = 0;
+        leafSearchCnt = 0;
+        leafCnt = 0;
+        leafSplitCnt = 0;
+        innerUpdateCnt = 0;
+        depth = 0;
+        dupKeyCnt = 0;
+        skewLeafCnt = 0;
+        pushBackCnt = 0;
+        logCmpCnt = 0;
+        notFoundCnt=0;
+        tmr_cache.setZero();
+        tmr_insert.setZero();
+        tmr_search.setZero();
+        tmr_inner.setZero();
+        tmr_split.setZero();
     }
     // Test use.
     int leafSplitCmp;
@@ -233,7 +252,10 @@ public:
     int depth;
     int dupKeyCnt;
     int skewLeafCnt;
-    TimerRDT tmr, tmr_insert, tmr_search, tmr_inner, tmr_split;
+    int pushBackCnt;
+    int logCmpCnt;
+    int notFoundCnt;
+    TimerRDT tmr_cache, tmr_insert, tmr_search, tmr_inner, tmr_split, tmr_log;
 protected:
     // inside methods including "search leafnode" / "leaf split" / "leaf insert" / "recursively inner node update".
     KVLeafNodeFin* leafSearch(const char* key);
@@ -252,6 +274,7 @@ private:
     std::unordered_map<kvObj*, QREF> mp;  
     std::unique_ptr<KVNodeFin> root; // root node of the B+tree
     std::shared_ptr<KVLeafFin> head; // list head of leaf. All leafs are in one list. 
+    // std::shared_ptr<KVLeafNodeFin> hnode; // list head of leaf. All leafs are in one list. 
 };
  
 }

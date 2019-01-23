@@ -30,8 +30,9 @@ public:
     //else, just let it in DRAM
     kvObj(const std::string& s, bool nvm_alloc): size_(s.size()), nvm_allocated(nvm_alloc) {
         if (nvm_alloc) {
-            char* buf = new char [size_];
+            char* buf = new char [size_+1];
             memcpy(buf, s.data(), size_);
+            buf[size_] = '\0';
             data_ = buf;
         } else {
             data_ = s.data();
@@ -41,9 +42,9 @@ public:
     
     kvObj(const char* dt, bool nvm_alloc): size_(strlen(dt)), nvm_allocated(nvm_alloc) {
         if (nvm_alloc) {
-            char* buf = new char [size_];
+            char* buf = new char [size_+1];
             memcpy(buf, dt, size_);
-            // buf[size_] = '\0';
+            buf[size_] = '\0';
             data_ = buf;
 
         } else {

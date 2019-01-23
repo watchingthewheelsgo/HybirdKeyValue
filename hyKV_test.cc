@@ -15,9 +15,12 @@
 #include "microBench.h"
 #include "hyKV_def.h"
 // #include "Tool.h"
-//#include "BplusTree.h"
-using namespace hybridKV;
+#include "BplusTree.h"
+#include "btree_map.h"
 
+using namespace hybridKV;
+using namespace stx;
+using namespace std;
 const int flag_write_count = 4 * 1000 * 1000;
 
 const int flag_read_count = 1 * 1000 * 1000;
@@ -43,27 +46,33 @@ bool isBreakPoint(int i) {
 }
 
 void testBplusTreeList(int num, int keyIdx) {
-    FILE* logFd = fopen("/home/why/logBTree116.txt","a+");
+    FILE* logFd = fopen("/home/why/logBTree122.txt","a+");
+    FILE* staticsFd = fopen("/home/why/staticsBTree122.txt", "a+");
     fprintf(logFd,"Function testBplusTreeList performance.(List version).\n");
     printf("Function testBplusTreeList performance.(List version).\n");
-    #ifdef PM_WRITE_LATENCY_TEST
+#ifdef PM_WRITE_LATENCY_TEST
     LOG("PM WR latency = "<< pm_latecny_write);
+    fprintf(logFd, "PM WR Latency = %d(ns).\n", pm_latecny_write);
 #endif
     
 #ifdef PM_READ_LATENCY_TEST
     LOG("PM RD latency = "<< pm_latency_read);
+    fprintf(logFd, "PM RD Latency = %d(ns).\n", pm_latency_read);
 #endif
     Config* cfg = new Config();
-    auto tree = new BplusTreeList(0);
+    // auto tree = new BplusTreeList(0);
+    // auto tree = new BplusTree();
+    auto tree = new BplusTreeSplit();
+    // btree_map<string, string> tree;
     std::vector<std::string> keys;
     std::vector<int> keyLens = {16, 40, 64};
     int keySize;
     int nums = num * mbi;
     fprintf(logFd, "Loading data, size = %dM.", nums/mbi);
-    if (keyIdx < 3)
-        fprintf(logFd, "key Length = %dB\n", keyLens[keyIdx]);
-    else
-        fprintf(logFd, "key Length is uniform of {16, 40, 64}\n");
+    // if (keyIdx < 3)
+    //     fprintf(logFd, "key Length = %dB\n", keyLens[keyIdx]);
+    // else
+    //     fprintf(logFd, "key Length is uniform of {16, 40, 64}\n");
     LOG("Loading data, size = " << nums/mbi << "M.");
     uint32_t valLength = 100;
 
@@ -80,16 +89,19 @@ void testBplusTreeList(int num, int keyIdx) {
         tmr_obj.start();
         auto k_obj = new kvObj(key, true);
         auto v_obj = new kvObj(val, true);
-        auto kv_pair = new KVPairFin(k_obj, v_obj);
+        // auto kv_pair = new KVPairFin(k_obj, v_obj);
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)k_obj->data(), k_obj->size());
         pflush((uint64_t*)v_obj->data(), v_obj->size());
-        pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
+        // pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
 #endif
         tmr_obj.stop();
 
         tmr_load.start();
-        tree->Insert(kv_pair);
+        tree->Insert(k_obj, v_obj);
+        // tree->Insert(kv_pair);
+        // tree->Put(key, val);
+        // tree.insert(key, val);
         tmr_load.stop();
 
         tmr_idle.start();
@@ -103,13 +115,26 @@ void testBplusTreeList(int num, int keyIdx) {
 
             LOG("--------------------statistics-----------------------");
             printf("Loading %dM...\n ", i/mbi);
-            printf("Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
-            printf("Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
-            printf("search time = %d(us).\n", tree->tmr_search.getDuration());
-            printf("insert time  = %d(us).\n", tree->tmr_insert.getDuration());
-            printf("leaf split time  = %d(us).\n", tree->tmr_split.getDuration());
-            printf("inner update time  = %d(us).\n", tree->tmr_inner.getDuration());
-            printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
+            // LOG("depth of the Tree " << tree->depth);
+            printf("all Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
+            printf("all Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // printf("Leaf Search time = %d(us), lower_bound time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->tmr_log.getDuration(), tree->logCmpCnt);
+            // printf("leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // printf("inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // printf("skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+
+            // fprintf(staticsFd, "Loading %dM...\n ", i/mbi);
+            // fprintf(staticsFd, "Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
+            // fprintf(staticsFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            // fprintf(staticsFd, "FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // fprintf(staticsFd, "Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // fprintf(staticsFd, "Leaf Search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // fprintf(staticsFd, "leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            
             TimerRDT tmr_rd, tmr_idle_rd;
             int sId = random() % (keys.size()-2*mbi-1);
             for (int k=0; k<2*mbi; ++k) {
@@ -117,6 +142,7 @@ void testBplusTreeList(int num, int keyIdx) {
                 std::string rdVal;
 
                 tmr_rd.start();
+                // rdVal = tree.find(rdKey)->second;
                 tree->Get(rdKey, &rdVal);
                 tmr_rd.stop();
 
@@ -128,24 +154,42 @@ void testBplusTreeList(int num, int keyIdx) {
         }
 
     }
-    LOG("leafSeach time " << tree->leafSearchCnt);
-    LOG("depth of the Tree " << tree->depth);
-    LOG("leafnode count " << tree->leafCnt);
-    LOG("innernode split time " << tree->innerUpdateCnt);
-    LOG("leafnode split time " << tree->leafSplitCnt << ". Compare count " << tree->leafSplitCmp);
-    LOG("leaf set slot compare count " << tree->leafCmpCnt);
-    LOG("dup key cnt = " << tree->dupKeyCnt);
-    LOG("BplusTree test done.");
+    // LOG("leafSeach time " << tree->leafSearchCnt);
+    // LOG("depth of the Tree " << tree->depth);
+    // LOG("leafnode count " << tree->leafCnt);
+    // LOG("innernode split time " << tree->innerUpdateCnt);
+    // LOG("leafnode split time " << tree->leafSplitCnt << ". Compare count " << tree->leafSplitCmp);
+    // LOG("leaf set slot compare count " << tree->leafCmpCnt);
+    // LOG("dup key cnt = " << tree->dupKeyCnt);
+    // LOG("BplusTree test done.");
 
     fprintf(logFd, "Loading %dM KV pair finished.\n", nums/mbi);
     printf("Loading %dM KV pair finished.\n", nums/mbi);
 
+    // tree->Geo();
+    // LOG("leaf is sorted: " <<tree->sortedLeaf());
+
+    // while (true) {
+    //     int che;
+    //     std::cin >>che;
+    //     if (che == 1) {
+    //         std::string up;
+    //         std::cin >> up;
+    //         tree->printLeafnode(up);
+    //     } else {
+    //         int x;
+    //         std::cin >> x;
+    //         tree->printNoLeaf(x);
+    //     }
+    // }
+
     while(true) {
-        std::cout << "Choose Options: 1-Insert x(M), 2-Get x(M), 3-Delete x(M), 4-Update x(M), 5-Scan x(M), 6-Quit" <<std::endl;
+        std::cout << "Choose Options: 1-Insert x(M), 2-Get x(M), 3-Delete x(M), 4-Update x(M), 5-Scan x(M), 6-Quit, 7-Geo." <<std::endl;
         int op, sz; 
         std::cin >> op >> sz;
         if (op == 1) {
             TimerRDT tmr_alloc, tmr_op, tmr_idle_op;
+            // tree->setZero();
             for (int k=0; k<sz*mbi; ++k) {
                 if (keyIdx == 3)
                     keySize = keyLens[random() % 3];
@@ -158,16 +202,19 @@ void testBplusTreeList(int num, int keyIdx) {
                 tmr_alloc.start();
                 auto k_obj_wr = new kvObj(ky, true);
                 auto v_obj_wr = new kvObj(vl, true);
-                auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
+                // auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
 #ifdef PM_WRITE_LATENCY_TEST
                 pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
                 pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
-                pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
+                // pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
 #endif
                 tmr_alloc.stop();
 
                 tmr_op.start();
-                tree->Insert(kv_pair);
+                tree->Insert(k_obj_wr, v_obj_wr);
+                // tree->Insert(kv_pair);
+                // tree->Put(ky, vl);
+                // tree.insert(ky, vl);
                 tmr_op.stop();
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
@@ -175,11 +222,29 @@ void testBplusTreeList(int num, int keyIdx) {
             
             fprintf(logFd, "Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration());   
             printf("Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration());         
-            printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
+            // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // printf("Leaf search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // printf("Leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // printf("inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // printf("skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            // LOG("depth of the Tree " << tree->depth);
             nums+=sz*mbi;
             printf("DB Size = %dM\n", nums / mbi);
+
+            // fprintf(staticsFd, "Under %dM KV pairs. Malloc/Insert %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            // fprintf(staticsFd, "Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
+            // fprintf(staticsFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
+            // fprintf(staticsFd, "FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // fprintf(staticsFd, "Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // fprintf(staticsFd, "Leaf Search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // fprintf(staticsFd, "leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            
         } else if (op == 2) {
             TimerRDT tmr_op, tmr_idle_op;
+            // tree->setZero();
             assert(nums == keys.size());
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
@@ -188,15 +253,34 @@ void testBplusTreeList(int num, int keyIdx) {
 
                 tmr_op.start();
                 tree->Get(key_r, &rdVal);
+                // rdVal = tree.find(key_r)->second;
                 tmr_op.stop();
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
             fprintf(logFd, "Under %dM KV pairs. Get %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
             printf("Under %dM KV pairs. Get %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // printf("Leaf search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // printf("leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // printf("inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // printf("skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            // LOG("depth of the Tree " << tree->depth);
+
+            // fprintf(staticsFd, "Under %dM KV pairs. Get %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+
+            // fprintf(staticsFd, "FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // fprintf(staticsFd, "Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // fprintf(staticsFd, "Leaf Search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // fprintf(staticsFd, "leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            // LOG("Missed key " << tree->notFoundCnt);
         } else if (op == 3) {
-            std::cout << "Deletion needs to be implemented." <<std::endl;
+            // std::cout << "Deletion needs to be implemented." <<std::endl;
             TimerRDT tmr_op, tmr_idle_op;
+            // tree->setZero();
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
                 auto key_r = keys[sId+k];
@@ -210,11 +294,29 @@ void testBplusTreeList(int num, int keyIdx) {
             }
             fprintf(logFd, "Under %dM KV pairs, Delete %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
             printf("Under %dM KV pairs, Delete %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());
+            // // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // // printf("Leaf search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // // printf("Leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // // printf("inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // // printf("skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            // // LOG("depth of the Tree " << tree->depth);
             nums -= sz*mbi;
             keys.erase(keys.begin()+sId, keys.begin()+sId+sz*mbi);
             printf("DB Size = %dM\n", nums / mbi);
+            
+            // fprintf(staticsFd, "Under %dM KV pairs, Delete %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+           
+            // // fprintf(staticsFd, "FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // // fprintf(staticsFd, "Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // // fprintf(staticsFd, "Leaf Search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // // fprintf(staticsFd, "leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            
         } else if (op == 4) {
             TimerRDT tmr_alloc, tmr_op, tmr_idle_op;
+            // tree->setZero();
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
                 auto ky = keys[sId+k];
@@ -223,16 +325,19 @@ void testBplusTreeList(int num, int keyIdx) {
                 tmr_alloc.start();
                 auto k_obj_wr = new kvObj(ky, false);
                 auto v_obj_wr = new kvObj(vl, true);
-                auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
+                // auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
 #ifdef PM_WRITE_LATENCY_TEST
                 pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
                 pflush((uint64_t*)v_obj_wr->data(), v_obj_wr->size());
-                pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
+                // pflush((uint64_t*)kv_pair, sizeof(KVPairFin));
 #endif
                 tmr_alloc.stop();
 
                 tmr_op.start();
-                tree->Insert(kv_pair);
+                tree->Update(k_obj_wr, v_obj_wr);
+                // tree->Update(ky, vl);
+                // tree->Insert(kv_pair);
+                // tree.insert(ky, vl);
                 tmr_op.stop();
 
                 tmr_idle_op.start();
@@ -240,26 +345,61 @@ void testBplusTreeList(int num, int keyIdx) {
             }
             fprintf(logFd, "Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
             printf("Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
-            printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
-        } else if (op == 5) {
-            TimerRDT tmr_op, tmr_idle_op;
-            int sId = random() % (nums-sz*mbi);
-            for (int k=0; k<sz*mbi; ++k) {
-                auto ky = keys[sId+k];
-                // auto vl = randomString(valLength);
-                std::vector<std::string> val;
+            // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // printf("Leaf search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // printf("Leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // printf("inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // printf("skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            // LOG("depth of the Tree " << tree->depth);
 
-                tmr_op.start();
-                tree->Scan(ky, 10, val);
-                tmr_op.stop();
-                tmr_idle_op.start();
-                tmr_idle_op.stop();
-            }
-            fprintf(logFd, "Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
-            printf("Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
-        
+            // fprintf(staticsFd, "Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            
+            // fprintf(staticsFd, "FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // fprintf(staticsFd, "Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // fprintf(staticsFd, "Leaf Search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // fprintf(staticsFd, "leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            
+        } else if (op == 5) {
+            // TimerRDT tmr_op, tmr_idle_op;
+            // int sId = random() % (nums-sz*mbi);
+            // tree->setZero();
+            // for (int k=0; k<sz*mbi; ++k) {
+            //     auto ky = keys[sId+k];
+            //     // auto vl = randomString(valLength);
+            //     std::vector<std::string> val;
+
+            //     tmr_op.start();
+            //     tree->Scan(ky, 10, val);
+            //     tmr_op.stop();
+            //     tmr_idle_op.start();
+            //     tmr_idle_op.stop();
+            // }
+            // fprintf(logFd, "Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            // printf("Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.", tree->pushBackCnt, tree->leafCmpCnt);
+            // printf("Leaf search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // printf("Leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // printf("inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // printf("skewed Leaf count = %d.\n", tree->skewLeafCnt);
+            // LOG("depth of the Tree " << tree->depth);
+
+            // fprintf(staticsFd, "Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            
+            // fprintf(staticsFd, "FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
+            // fprintf(staticsFd, "Leafnode push_back cnt = %d, leaf compare cnt = %d.\n", tree->pushBackCnt, tree->leafCmpCnt);
+            // fprintf(staticsFd, "Leaf Search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
+            // fprintf(staticsFd, "leaf split time  = %d(us), split cnt = %d.\n", tree->tmr_split.getDuration(), tree->leafSplitCnt);
+            // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
+            // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
+            
         } else if (op == 6) {
             break;
+        } else if(op == 7){
+            // tree->Geo();
         } else {
             std::cout << "wrong option" <<std::endl;
         }
@@ -449,6 +589,7 @@ void testHashTable(int num, int keyIdx) {
             }
             fprintf(logFd, "Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
             printf("Under %dM KV pairs, Malloc/Update %dM takes %d/%d (us).\n", nums/mbi, sz, tmr_alloc.getDuration()-tmr_idle_op.getDuration(), tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            LOG("dupKeyCnt " << ht->dupKeyCnt());
         } else if (op == 5) {
             break;
         }else {
