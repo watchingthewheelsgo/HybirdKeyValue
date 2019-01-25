@@ -11,6 +11,10 @@
 namespace hybridKV {
 
 void KVPairSplit::clear() {
+    if (key_ != nullptr)
+        delete key_;
+    if (val_ != nullptr)
+        delete val_;
     hash_ = 0;
     key_ = nullptr;
     val_ = nullptr;
@@ -68,6 +72,7 @@ void KVPair::Set(const uint8_t hash, const std::string& key, const std::string& 
 int BplusTreeSplit::Insert(kvObj* k, kvObj* v) {
     // std::string tmp_key(key);
     // LOG("Ins");
+    ++writeCnt;
     const char* key = k->data();
     size_t size = k->size();
     const uint8_t hash = PearsonHash(key, size);

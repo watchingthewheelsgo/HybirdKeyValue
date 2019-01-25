@@ -19,6 +19,12 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <deque>
+#include <unordered_map>
+#include <atomic>
+
+#include <boost/lockfree/spsc_queue.hpp>
+#include <boost/atomic.hpp>
 
 #include "atomic_pointer.h"
 #include "DBInterface.h"
@@ -28,6 +34,26 @@
 #include "hyKV_def.h"
 #include "latency.hpp"
 #include "kvObject.h"
+#include "Thread.h"
+
+namespace std {
+    using namespace hybridKV;
+    // template specialization hash<kvObj*> and equal_to<kvObj*>, then offer them to unordered_map
+    template <>
+    class hash<kvObj*> {
+    public:
+        size_t operator()(const kvObj* k) const {
+            return smHasher(k->data(), k->size());
+        }
+    };
+    template <>
+    class equal_to<kvObj*> {
+    public:
+        bool operator()(const kvObj* x, const kvObj* y) const {
+            return std::strcmp(x->data(), y->data()) == 0;
+        }
+    };
+}
 
 namespace hybridKV {
 
@@ -38,6 +64,12 @@ static const int LEAF_KEYS = 24;
 static const int LEAF_KEYS_MIDPOINT = LEAF_KEYS / 2;
 
 // persistent
+struct cmdInfo {
+    cmdType type;
+    void* key;
+    void* value;
+    void* ptr;
+};
 
 class KVPairSplit {
     public:
@@ -145,22 +177,13 @@ struct KVLeafNode : KVNode {
     KVLeafNode* next;
 };
 
-//#ifdef HiKV_TEST
-//typedef leveldb::port::AtomicPointer AtomicPointer;
-//class scanResHiKV {
-//public:
-//    explicit scanResHiKV() {
-//        done.Release_Store(reinterpret_cast<void*>(0));
-//        elems.clear();
-//    }
-//    AtomicPointer done;
-//    std::list<std::string> elems;
-//};
-//#endif
-
 class BplusTreeSplit {
 public:
-    BplusTreeSplit(){ };
+    // typedef boost::lockfree::spesc_queue<cmdInfo*, boost::lockfree::capacity<1 << 21>>::iterator QITOR;
+    typedef std::deque<cmdInfo*>* QPTR;
+    typedef std::deque<cmdInfo*>::reference QREF;
+    BplusTreeSplit(int i): writeCnt(0), idx(i), qSize(0), mu_(new std::deque<cmdInfo*>()), mp_(new std::unordered_map<kvObj*, QREF>()), immu_(nullptr), existScan(false), flush(false)
+    { };
     ~BplusTreeSplit(){ };
 
     //general interfaces provided by BplustreeSplit
@@ -171,9 +194,130 @@ public:
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
     int Update(kvObj* key, kvObj* val);
-    // to measure BG time consumption.
+
+// #ifndef HiKV_TEST
+    // Interfaces for Que Operations
+//--------------------------------------------------
+//    use lock free spsc_queue
+//---------------------------------------------------
+    void lockfreePush(cmdInfo* cmd) {
+        // auto res = 
+        que2.push(cmd);
+        ++qSize;
+    }
+
+    cmdInfo* lockfreePop() {
+        cmdInfo* res;
+        que2.pop(res);
+        --qSize;
+        return res;
+    }
+
+//--------------------------------------------------
+//  use std::deque<> and Mutex
+//--------------------------------------------------
+    void cmdPush(cmdInfo* cmd) {
+        mtx_.lock();
+        auto res = mp.find((kvObj*)cmd->key);
+        if (res != mp.end()) {
+            res->second->value = cmd->value;
+        } else {
+            que.push_back(cmd);
+            ++qSize;
+            mp.insert({(kvObj*)cmd->key, que.back()});
+        }
+        mtx_.unlock();
+    }
+
+    cmdInfo* cmdPop() {
+        mtx_.lock();
+        cmdInfo* cmd = que.front();
+        mp.erase((kvObj*)cmd->key);
+        que.pop_front();
+        --qSize;
+        mtx_.unlock();
+        return cmd;
+    }
+//-------------------------------------------------------
+//  use two std::deque without mutex
+//------------------------------------------------------
+
+    void mutPush(cmdInfo* cmd) {
+        assert(mu_ != nullptr);
+        if (flush.load() == false && (cmd->type == kFlushType || cmd->type == kScanNorType || cmd->type == kScanNumType))
+            flush.store(true);
+        // mtx_.lock();
+        if (cmd->type == kFlushType) {
+            mu_->push_back(cmd);
+            ++qSize;
+        } else {
+            auto res = mp_->find((kvObj*)cmd->key);
+            if (res != mp_->end()) {
+                res->second->value = cmd->value;
+            } else {
+                mu_->push_back(cmd);
+                ++qSize;
+                mp_->insert({(kvObj*)cmd->key, mu_->back()});
+            }
+        }
+        // mtx_.unlock();
+        // mu_->push_back(cmd);
+        // ++qSize;   
+        if (qSize.load() > 100 || flush.load() == true) {    
+        
+            if (immu_.load() == nullptr) {
+                // mtx_.lock();
+                immu_.store(mu_);
+                mu_ = new std::deque<cmdInfo*>();
+                delete mp_;
+                mp_ = new std::unordered_map<kvObj*, QREF>();
+                qSize.store(0);
+                flush.store(false);
+                // mtx_.unlock();
+            }
+        }
+    }
+    bool dumpReady() {
+        return immu_.load() != nullptr;
+    }
+    QPTR getList() {
+        return immu_.load();
+    }
+    void resetList() {
+        immu_.store(nullptr);
+    }
+    // void immutPop() {
+
+    // }
+    bool finished() {
+        if (immu_.load() == nullptr && qSize.load() > 0) {
+            auto cmd = new cmdInfo();
+            cmd->type = kFlushType;
+            mutPush(cmd);
+        }
+        return (qSize.load() == 0) && (immu_.load() == nullptr);
+    }
+    bool flushFlag() {
+        return flush.load();
+    }
+    void setFlush() {
+        flush.store(true);
+    }
+    int queSize() {
+        return qSize.load();
+    }
+
+    void clearStats() {
+        tmr.setZero();
+        writeCnt = 0;
+    }
+
+// #endif
+    // to measure BG time consumtion and write count.
     TimerRDT tmr;
+    uint64_t writeCnt;
 protected:
+    int idx;
     KVLeafNodeSplit* leafSearch(const char* key);
     uint8_t PearsonHash(const char* data, const size_t size);
 
@@ -185,9 +329,23 @@ protected:
  
     
 private:
-    
+
+// #ifndef HiKV_TEST
+    boost::lockfree::spsc_queue<cmdInfo*, boost::lockfree::capacity<1 << 21>> que2; // BG cmd que
+    std::deque<cmdInfo*> que;
+    std::unordered_map<kvObj*, QREF> mp;
+    std::unordered_map<kvObj*, QREF>* mp_;  // Record existing key in the que
+    Mutex mtx_;
+
+    QPTR mu_;
+    std::atomic<QPTR> immu_;
+    bool existScan;
+    std::atomic<bool> flush;
+
+// #endif
+    std::atomic<int> qSize;
     std::unique_ptr<KVNodeSplit> root; // root node of the B+tree
-    std::shared_ptr<KVLeafSplit> head; // list head of leafnodes.
+    std::shared_ptr<KVLeafSplit> head; // list head of leafs.
 
 };
 
@@ -269,6 +427,7 @@ protected:
 
     
 private:
+    Mutex mtx_;
     std::unique_ptr<KVNode> root; // root node of the B+tree
     std::shared_ptr<KVLeaf> head; // list head of leafnodes.
 

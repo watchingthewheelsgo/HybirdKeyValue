@@ -14,6 +14,7 @@
 #include "kvObject.h"
 #include "microBench.h"
 #include "hyKV_def.h"
+#include "Db.h"
 // #include "Tool.h"
 #include "BplusTree.h"
 #include "btree_map.h"
@@ -62,7 +63,7 @@ void testBplusTreeList(int num, int keyIdx) {
     Config* cfg = new Config();
     // auto tree = new BplusTreeList(0);
     // auto tree = new BplusTree();
-    auto tree = new BplusTreeSplit();
+    auto tree = new BplusTreeSplit(0);
     // btree_map<string, string> tree;
     std::vector<std::string> keys;
     std::vector<int> keyLens = {16, 40, 64};
@@ -853,9 +854,13 @@ void microBench(int num, int keyIdx, const std::string& name) {
     }
 
     // hyDB::Open(&db, name, bgNums);
+#ifdef HiKV_TEST
     HiKV* db = new HiKV();
     HiKV::BGWork(reinterpret_cast<void*>(db));
-
+#else
+    DBImpl* db = new DBImpl(bgNums);
+    DBImpl::BGWork(reinterpret_cast<void*>(db));
+#endif
     if (db == nullptr)
         LOG("Failed to open db: "<< name);
     std::vector<std::string> keys;
@@ -888,8 +893,9 @@ void microBench(int num, int keyIdx, const std::string& name) {
 
         tmr_idle.start();
         tmr_idle.stop();
-
+        // LOG(i);
         if(isBreakPoint(i)) {
+            // LOG(i);
             fprintf(logFd, "Loading %dM...\n ", i/mbi);
             // fprintf(logFd, "Malloc time = %d(us).\n ", tmr_obj.getDuration()-tmr_idle.getDuration());
             fprintf(logFd, "Inert time = %d(us).\n", tmr_load.getDuration()-tmr_idle.getDuration());
@@ -919,13 +925,32 @@ void microBench(int num, int keyIdx, const std::string& name) {
 
 
     }
+    db->flushall();
     LOG("Wait for BG working...");
-    while (db->queSize() != 0);
+#ifdef HiKV_TEST
+    while (db->queSize() > 10);
+#else
+    // for (int i=0; i<bgNums; ++i) { 
+    //     while (db->tree(i)->queSize() > 100);
+    // }
+    db->finished();
+#endif
+
     LOG("B+Tree finished.");
     fprintf(logFd, "Loading %dM KV pair finished.\n", nums/mbi);
     printf("Loading %dM KV pair finished.\n", nums/mbi);
+
+#ifdef HiKV_TEST
+    LOG("BTree write cnt = " << db->tree()->writeCnt);
     printf("HT time consume %d us, BTree time consume %d us.\n", tmr_load.getDuration()- tmr_idle.getDuration(), db->getBGTime()-tmr_idle.getDuration());
     db->clearBGTime();
+#else 
+    printf("HT time consume %d us.\n", tmr_load.getDuration()- tmr_idle.getDuration());
+    for (int i=0; i<bgNums; ++i) {
+        printf("tree %d execs %d ops, time = %d us.", i, db->tree(i)->writeCnt, db->tree(i)->tmr.getDuration()-tmr_idle.getDuration());
+        db->tree(i)->clearStats();
+    }
+#endif
     while (true) {
         std::cout << "Choose Options: 1-Insert x(M), 2-Get x(M), 3-Delete x(M), 4-Update x(M), 5-scan, 6-Quit" <<std::endl;
         int op, sz; 
@@ -946,12 +971,31 @@ void microBench(int num, int keyIdx, const std::string& name) {
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
+            db->flushall();
+            // sleep(2);
+            // db->progress();
             LOG("Wait for BG working...");
-            while (db->queSize() != 0);
+#ifdef HiKV_TEST
+            while (db->queSize() > 10);
+#else 
+            db->finished();
+            // for (int i=0; i<bgNums; ++i) { 
+            //     while (db->tree(i)->queSize() > 100);
+            // }
+#endif
             LOG("B+Tree finished.");
             fprintf(logFd, "Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());   
             printf("Under %dM KV pairs. Insert %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration());         
+           
+#ifdef HiKV_TEST
             printf("BGTree insert takes time %d (us).\n", db->getBGTime()-tmr_idle_op.getDuration());
+            db->clearBGTime();
+#else 
+            for (int i=0; i<bgNums; ++i) {
+                printf("tree %d execs %d ops, time = %d us.\n", i, db->tree(i)->writeCnt, db->tree(i)->tmr.getDuration()-tmr_idle_op.getDuration());
+                db->tree(i)->clearStats();
+            }
+#endif
             nums+=sz*mbi;
             printf("DB Size = %dM\n", nums / mbi);
         } else if (op == 2) {
@@ -989,10 +1033,13 @@ void microBench(int num, int keyIdx, const std::string& name) {
             keys.erase(keys.begin()+sId, keys.begin()+sId+sz*mbi);
             printf("DB Size = %dM", nums / mbi);
         } else if (op == 4) {
+            rand_val(random() % 100);
             TimerRDT tmr_op, tmr_idle_op;
             int sId = random() % (nums-sz*mbi);
             for (int k=0; k<sz*mbi; ++k) {
-                auto ky = keys[sId+k];
+                int skew = zipf(0.99, sz*mbi);
+                // int skew = 0;
+                auto ky = keys[sId+skew];
                 auto vl = randomString(valLength);
 
                 tmr_op.start();
@@ -1001,8 +1048,25 @@ void microBench(int num, int keyIdx, const std::string& name) {
                 tmr_idle_op.start();
                 tmr_idle_op.stop();
             }
+            db->flushall();
+#ifdef HiKV_TEST
+            while (db->queSize() > 10);
+#else 
+            db->finished();
+#endif
             fprintf(logFd, "Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
             printf("Under %dM KV pairs, Update %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+
+#ifdef HiKV_TEST
+            printf("BGTree insert takes time %d (us).\n", db->getBGTime()-tmr_idle_op.getDuration());
+            db->clearBGTime();
+#else 
+            for (int i=0; i<bgNums; ++i) {
+                printf("tree %d execs %d ops, time = %d us.\n", i, db->tree(i)->writeCnt, db->tree(i)->tmr.getDuration()-tmr_idle_op.getDuration());
+                db->tree(i)->clearStats();
+            }
+#endif
+
         } else if (op == 5) {
             TimerRDT tmr_op, tmr_idle_op;
             int sId = random() % (nums-sz*mbi);

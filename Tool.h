@@ -10,6 +10,9 @@
 #include <string>
 #include <cstdint>
 #include <list>
+#include <cmath>
+#include <assert.h>
+// #include 
 #include "atomic_pointer.h"
 
 namespace hybridKV {
@@ -33,7 +36,8 @@ enum cmdType{
     kScanNorType = 0x3,
     kScanNumType = 0x4,
     kRoundStart = 0x5, 
-    kRoundStop = 0x6
+    kRoundStop = 0x6,
+    kFlushType = 0x7
 };
 typedef leveldb::port::AtomicPointer AtomicPointer;
 class scanRes {
@@ -46,6 +50,8 @@ public:
     std::list<const char*> elems;
 };
 #define LOG(info) if(debug_on) std::cout<< info << std::endl
+//----- Constants -----------------------------------------------------------
+
 // void Latency(uint64_t time) {
 	
 // }

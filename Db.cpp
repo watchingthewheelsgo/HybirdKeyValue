@@ -9,7 +9,7 @@
 #include <algorithm>
 #include "Db.h"
 // #include "SkipList.h"
-#include "BplusTreeList.h"
+// #include "BplusTreeList.h"
 #include "Thread.h"
 #include "Configure.h"
 #include "kvObject.h"
@@ -45,14 +45,14 @@ DBImpl:: DBImpl(int size):
     bt_size(cfg->split_size),
     bt_grp(new btPointer [cfg->split_size]),
     ht_(new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, cfg->in_memory)),
-    thrds(new ThreadPool(cfg->split_size))
+    thrds(new ThreadPool(cfg->split_size)), nextIdx(0)
     {
         cfg->lastDb = ht_;
         cfg->bt_grp = bt_grp;
         cfg->thrds = thrds;
         LOG("Creating BplusTrees...");
         for (int i=0; i<cfg->split_size; ++i) {
-            bt_grp[i] = new BplusTreeList(i);
+            bt_grp[i] = new BplusTreeSplit(i);
         }
         LOG("there are " << cfg->split_size <<" Bplus Trees created.");
 }
@@ -71,57 +71,32 @@ int DBImpl::Get(const std::string& key, std::string* val) {
 }
 //
 int DBImpl::getApproIndex() {
-    if (bt_size == 1)
-        return 0;
-    int x=0, min=bt_grp[0]->busyCnt(), k;
-    for (int k=1; k<bt_size; ++k) {
-        int tmp = bt_grp[k]->busyCnt();
-        if (tmp < min) {
-            x = k;
-            min = tmp;
-        }
-    }
-    return x;
+    nextIdx = (nextIdx+1) % bt_size;
+    return nextIdx;
 }
 int DBImpl::Put(const std::string& key, const std::string& val) {
     kvObj* newKey = new kvObj(key, true);
     kvObj* value = new kvObj(val, true);
 #ifdef PM_WRITE_LATENCY_TEST
-    pflush((uint64_t*)newKey, newKey->size());
-    pflush((uint64_t*)value, value->size());
+    pflush((uint64_t*)newKey->data(), newKey->size());
+    pflush((uint64_t*)value->data(), value->size());
 #endif
     Dict::dictEntry* entryPointer = nullptr;
-    int x = ht_->Set(newKey, value, &entryPointer);
-    if (x == -1 || entryPointer == nullptr)
+    if (ht_->Set(newKey, value, &entryPointer) == -1 || entryPointer == nullptr)
         return -1;
-    if (x == 0) {
-        int idx = getApproIndex();
-        auto pair = new KVPairFin(newKey, value);
 
-    #ifdef PM_WRITE_LATENCY_TEST
-        pflush((uint64_t*)pair, sizeof(KVPairFin));
-    #endif
-        btCmdNode* node = new btCmdNode;
+    int idx = getApproIndex();
 
-        entryPointer->idx = idx;
-        node->ptr = entryPointer->btNodeAddr = (void*)pair;
-        node->key = nullptr;
-        node->val = nullptr;
-        node->type = kInsertType;
-        bt_grp[idx]->cmd_push(node);
-    } else {
-        // reserved to change to write-batch version
-        int idx = entryPointer->idx;
-        btCmdNode* node = new btCmdNode;
+    cmdInfo* node = new cmdInfo;
 
-        node->ptr = (void*)(entryPointer->btNodeAddr);
-        node->key = (void*)nullptr;
-        node->val = (void*)value;
-        node->type = kUpdateType;
-
-        bt_grp[idx]->cmd_push(node);
-        delete newKey;
-    }
+    entryPointer->idx = idx;
+    node->ptr = nullptr;
+    node->key = newKey;
+    node->value = value;
+    node->type = kInsertType;
+    bt_grp[idx]->mutPush(node);
+    // bt_grp[idx]->cmdPush(node);
+    // bt_grp[idx]->lockfreePush(node);
     return 0;
     
 }
@@ -130,7 +105,7 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     kvObj* rpKey = new kvObj(key, false);
     kvObj* newVal = new kvObj(val, true);
 #ifdef PM_WRITE_LATENCY_TEST
-    pflush((uint64_t*)newVal, newVal->size());
+    pflush((uint64_t*)newVal->data(), newVal->size());
 #endif
     Dict::dictEntry* entryPointer = nullptr;
     if (ht_->Set(rpKey, newVal, &entryPointer) == -1 || entryPointer == nullptr)
@@ -138,25 +113,25 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     
     int idx = entryPointer->idx;
     
-    btCmdNode* node = new btCmdNode;
+    cmdInfo* node = new cmdInfo;
 
-    node->ptr = (void*)(entryPointer->btNodeAddr);
-    node->key = nullptr;
-    node->val = (void*)newVal;
+    node->ptr = nullptr;
+    node->key = (void*)rpKey;
+    node->value = (void*)newVal;
     node->type = kUpdateType;
-    
-    bt_grp[idx]->cmd_push(node);
+    bt_grp[idx]->mutPush(node);
+    // bt_grp[idx]->cmdPush(node);
     return 0;
 }
-void DBImpl::signalBG() {
-//     btCmdNode* node = new btCmdNode;
-//     node->type = kFlushType;
-//     for (int i=0; i<bt_size; ++i) {
-//         bt_grp[i]->cmd_push(node);
-//     }
-//     delete node;
-//     return;
-}
+// void DBImpl::signalBG() {
+// //     btCmdNode* node = new btCmdNode;
+// //     node->type = kFlushType;
+// //     for (int i=0; i<bt_size; ++i) {
+// //         bt_grp[i]->cmd_push(node);
+// //     }
+// //     delete node;
+// //     return;
+// }
 int DBImpl::Delete(const std::string& key) {
     
     kvObj* delKey = new kvObj(key, false);
@@ -165,16 +140,14 @@ int DBImpl::Delete(const std::string& key) {
     if (ht_->Delete(delKey, idx) == -1)
         return -1;
     
-    btCmdNode* node = new btCmdNode;
-#ifdef PM_WRITE_LATENCY_TEST
-    pflush((uint64_t*)node, sizeof(*node));
-#endif
+    cmdInfo* node = new cmdInfo;
+
     node->key = (void*)delKey;
-    node->val = nullptr;
+    node->value = nullptr;
     node->type = kDeleteType;
     node->ptr = nullptr;
     
-    bt_grp[idx]->cmd_push(node);
+    bt_grp[idx]->cmdPush(node);
     return 0;
 }
 
@@ -198,27 +171,27 @@ int DBImpl::Scan(const std::string& beginKey, int n, std::vector<std::string>& o
     
     // mergeScan(result, output);
     
-    // return 0;
+    return 0;
 }
 
 int DBImpl::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
-    kvObj bgKey(beginKey, false);
-    kvObj edKey(lastKey, false);
-    std::vector<scanRes*> result(bt_size);
+    // kvObj bgKey(beginKey, false);
+    // kvObj edKey(lastKey, false);
+    // std::vector<scanRes*> result(bt_size);
     
-    for (int idx=0; idx<bt_size; ++idx) {
-        btCmdNode* node = new btCmdNode;
-        node->val = (void*)(&edKey);
-        node->key = (void*)(&bgKey);
-        result[idx] = new scanRes();
-        node->ptr = (void*)(result[idx]);
-        node->type = kScanNorType;
+    // for (int idx=0; idx<bt_size; ++idx) {
+    //     btCmdNode* node = new btCmdNode;
+    //     node->val = (void*)(&edKey);
+    //     node->key = (void*)(&bgKey);
+    //     result[idx] = new scanRes();
+    //     node->ptr = (void*)(result[idx]);
+    //     node->type = kScanNorType;
         
-        bt_grp[idx]->cmd_push(node);
-    }
-    for (int idx=0; idx<bt_size; ++idx) {
-        while (reinterpret_cast<uint64_t>(result[idx]->done.Acquire_Load()) == 0);
-    }
+    //     bt_grp[idx]->cmd_push(node);
+    // }
+    // for (int idx=0; idx<bt_size; ++idx) {
+    //     while (reinterpret_cast<uint64_t>(result[idx]->done.Acquire_Load()) == 0);
+    // }
     
     // mergeScan(result, output);
     
@@ -263,51 +236,95 @@ void DBImpl::BGWork(void* db) {
     
 void DBImpl::BgInit() {
     for (int i=0; i<bt_size; ++i) {
-        thrds->CreateJobs(schedule, reinterpret_cast<void*>(bt_grp[i]), i);
+        thrds->CreateJobs(schedulev2, reinterpret_cast<void*>(bt_grp[i]), i);
     }
 }
-    
-void* schedule(void* arg) {
-    BplusTreeList* curBT = reinterpret_cast<BplusTreeList*>(arg);
+int call(cmdInfo* cmd) {
+
+}
+void* schedulev2(void* arg) {
+    BplusTreeSplit* curBT = reinterpret_cast<BplusTreeSplit*>(arg);
     
     // maybe add control with onSchedule();
     while (true) {
-        // if (toFlush) {
-        //     while (!curBT->emptyQue)
-        // }
-        while (!curBT->emptyQue()) {
-            btCmdNode* cmd = curBT->extractCmd();
-            int res = 0;
-//            enum cmdType{
-//                kDeleteType = 0x0,
-//                kUpdateType = 0x1,
-//                kInsertType = 0x2,
-//                kScanNorType = 0x3,
-//                kScanNumType = 0x4
-//            };
-            // struct btCmdNode {
-            //     cmdType type;
-            //     void* key;
-            //     void* val;
-            //     void* ptr;
-            // };
+        if (curBT->dumpReady()) {
+            auto list = curBT->getList();
+            for (auto &cmd:*list) {
+                int res = 0;
+                switch (cmd->type) {
+                    case kDeleteType:
+                        curBT->tmr.start();
+                        res = curBT->Delete((kvObj*)cmd->key);
+                        curBT->tmr.stop();
+                        delete (kvObj*)(cmd->key);
+                        break;
+                    case kUpdateType:
+                        curBT->tmr.start();
+                        res = curBT->Update((kvObj*)cmd->key, (kvObj*)cmd->value);
+                        delete (kvObj*)(cmd->key);
+                        curBT->tmr.stop();
+                        break;
+                    case kInsertType:
+                        curBT->tmr.start();
+                        res = curBT->Insert((kvObj*)cmd->key, (kvObj*)cmd->value);
+                        curBT->tmr.stop();
+                        break;
+                    // case kScanNumType:
+                    //     assert(curSL->emptyQue());
+                    //     res = curSL->Scan(cmd->key, (uint64_t)(cmd->priv), *(reinterpret_cast<scanRes*>(cmd->val)));
+                    //     break;
+                    case kScanNorType:
+                        // assert(curBT->emptyQue());
+                        // res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
+                        break;
+                    case kFlushType:
+                        // curBT->clock();
+                        break;
+                    default:
+                        // LOG("unKnown cmd type");
+                        // res = -1;
+                        break;
+                }
+                if (res != 0) {
+                    LOG("Failed Operation");
+                    LOG("Error type " << cmd->type);
+                    continue;
+                }
+            }
+            delete list;
+            curBT->resetList();
+        }
 
-            // cmdType type = cmd->type;
-            // auto node = cmd->slNodeAddr;
-            // auto key = cmd->key;
-            // auto type = cmd->type;
-            // kDeleteType = 0x0, kUpdateType = 0x1, kInsertType = 0x2
+    }
+}
+
+void* schedule(void* arg) {
+    BplusTreeSplit* curBT = reinterpret_cast<BplusTreeSplit*>(arg);
+    
+    // maybe add control with onSchedule();
+    while (true) {
+
+        while (curBT->queSize() > 100) {
+            cmdInfo* cmd = curBT->cmdPop();
+            // cmdInfo* cmd = curBT->lockfreePop();
+            int res = 0;
             switch (cmd->type) {
                 case kDeleteType:
+                    curBT->tmr.start();
                     res = curBT->Delete((kvObj*)cmd->key);
+                    curBT->tmr.stop();
                     delete (kvObj*)(cmd->key);
                     break;
                 case kUpdateType:
-                    res = curBT->Update((KVPairFin*)cmd->ptr, (kvObj*)cmd->val);
+                    curBT->tmr.start();
+                    res = curBT->Update((kvObj*)cmd->key, (kvObj*)cmd->value);
                     delete (kvObj*)(cmd->key);
+                    curBT->tmr.stop();
                     break;
                 case kInsertType:
-                    res = curBT->Insert((KVPairFin*)cmd->ptr);
+                    curBT->tmr.start();
+                    res = curBT->Insert((kvObj*)cmd->key, (kvObj*)cmd->value);
+                    curBT->tmr.stop();
                     break;
                 // case kScanNumType:
                 //     assert(curSL->emptyQue());
@@ -315,18 +332,18 @@ void* schedule(void* arg) {
                 //     break;
                 case kScanNorType:
                     // assert(curBT->emptyQue());
-                    res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
+                    // res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
                     break;
                 // case kFlushType:
                 //     // curBT->clock();
                 //     break;
                 default:
-                    LOG("unKnown cmd type");
-                    res = -1;
+                    // LOG("unKnown cmd type");
+                    // res = -1;
                     break;
             }
             if (res != 0) {
-                LOG("Failed Operation upon SL");
+                LOG("Failed Operation");
                 LOG("Error type " << cmd->type);
                 continue;
             }

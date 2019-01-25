@@ -159,6 +159,7 @@ void BplusTreeList::leafSplitFull(KVLeafNodeFin *leafnode, KVPairFin* kv) {
     innerUpdateAfterSplit(leafnode, std::move(new_leafnode), &split_key);
     tmr_inner.stop();
 }
+// test use
 void BplusTreeList::Geo() {
     int max=0, min = LEAF_KEYS_L;
     int sum = 0;

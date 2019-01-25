@@ -12,7 +12,7 @@
 #define NEED_SCAN
 // #define HiKV_TEST
 
-#define PM_WRITE_LATENCY_TEST
+// #define PM_WRITE_LATENCY_TEST
 //#define PM_READ_LATENCY_TEST
 
 // #define LINUX_CPU_AFFINITY

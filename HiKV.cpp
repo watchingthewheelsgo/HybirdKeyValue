@@ -16,7 +16,7 @@
 namespace hybridKV {
     
 // int HiKV::cnt = 0;
-HiKV::HiKV():cfg(new Config()), tree_(new BplusTreeSplit()), bgSchedule(true), thrds(new ThreadPool(cfg->split_size)), qSize(0),
+HiKV::HiKV():cfg(new Config()), tree_(new BplusTreeSplit(0)), bgSchedule(true), thrds(new ThreadPool(cfg->split_size)), qSize(0),
     ht_(new HashTable(cfg->ht_size, cfg->ht_limits, cfg->hasher, cfg->in_memory))
     {
         
@@ -35,9 +35,14 @@ void* schedule2(void* arg) {
     auto bgTree = db->tree();
     while(true) {
         // bool loop = db->emptyQue();
-        while (db->queSize() > 0) {
-            // LOG(db->queSize());
-            cmdInfo* cmd = db->freePop();
+        while (db->tree()->queSize() > 0) {
+            // LOG(db->tree()->queSize());
+            // cmdInfo* cmd = db->freePop();
+            cmdInfo* cmd = bgTree->cmdPop();
+            // mtx_.lock();
+            // cmdInfo* cmd = bgTree->lockfreePop();
+            // --qSize;
+            // mtx_.unlock();
             cmdType type = cmd->type;
             int res = 0;
             switch (type) {
@@ -58,6 +63,7 @@ void* schedule2(void* arg) {
                     // LOG(3);
                     bgTree->tmr.start();
                     res = bgTree->Delete((kvObj*)cmd->key);
+                    delete (kvObj*)cmd->key;
                     bgTree->tmr.stop();
                     break;
                 case kScanNorType:
@@ -114,7 +120,12 @@ int HiKV::Put(const std::string& key, const std::string& val) {
     cmd->ptr = nullptr;
     
     // queue_push(cmd);
-    freePush(cmd);
+    // freePush(cmd);
+    // mtx_.lock();
+    tree_->cmdPush(cmd);
+    // tree_->lockfreePush(cmd);
+    // ++qSize;
+    // mtx_.unlock();
     // LOG("p" << HiKV::cnt);
     // LOG("queSize = " << this->queSize());
     // tmr_ht.stop();
@@ -142,7 +153,11 @@ int HiKV::Update(const std::string& key, const std::string& val) {
     cmd->ptr = nullptr;
 
     // queue_push(cmd);
-    freePush(cmd);
+    // freePush(cmd);
+    // mtx_.lock();
+    tree_->cmdPush(cmd);
+    // ++qSize;
+    // mtx_.unlock();
     // LOG(this->queSize());
     return 0;
 }

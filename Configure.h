@@ -25,7 +25,7 @@ class HashTable;
 class hyDB;
 class DB;
 // class SkipList;
-class BplusTreeList;
+class BplusTreeSplit;
 class ThreadPool;
 
 
@@ -49,7 +49,7 @@ public:
     // uint32_t min_key;
     hashFunc hasher;
     HashTable* lastDb;
-    BplusTreeList** bt_grp;
+    BplusTreeSplit** bt_grp;
     ThreadPool* thrds;
     //    Timer* tmr;
     // int* index;

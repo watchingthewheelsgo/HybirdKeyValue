@@ -31,24 +31,6 @@
 #include "latency.hpp"
 #include "Thread.h"
 
-namespace std {
-    using namespace hybridKV;
-    // template specialization hash<kvObj*> and equal_to<kvObj*>, then offer them to unordered_map
-    template <>
-    class hash<kvObj*> {
-    public:
-        size_t operator()(const kvObj* k) const {
-            return smHasher(k->data(), k->size());
-        }
-    };
-    template <>
-    class equal_to<kvObj*> {
-    public:
-        bool operator()(const kvObj* x, const kvObj* y) const {
-            return std::strcmp(x->data(), y->data()) == 0;
-        }
-    };
-}
 namespace hybridKV {
 
 static const int INNER_KEYS_L = 4;
@@ -195,20 +177,20 @@ public:
     void cmd_push(btCmdNode* tdNode) {
 
         mtx_.lock();
-        auto res = mp.find((kvObj*)tdNode->key);
-        if (res!= mp.end()) {
-            res->second->val = tdNode->val;
-        } else {
-            cmdQue.push_back(tdNode);
-            mp.insert({(kvObj*)tdNode->key, cmdQue.back()});
-        }
+        // auto res = mp.find((kvObj*)tdNode->key);
+        // if (res!= mp.end()) {
+        //     res->second->val = tdNode->val;
+        // } else {
+        cmdQue.push_back(tdNode);
+        //     mp.insert({(kvObj*)tdNode->key, cmdQue.back()});
+        // }
         mtx_.unlock();
     }
     // only be called when cmdQue is not empty
     btCmdNode* extractCmd() {
         mtx_.lock();
         btCmdNode* cmd = cmdQue.front();
-        mp.erase((kvObj*)cmd->key);
+        // mp.erase((kvObj*)cmd->key);
         cmdQue.pop_front();
         mtx_.unlock();
         return cmd;
@@ -271,7 +253,7 @@ private:
     // bool toFlush;
     // TimerRDT tmr, tmr_cp;
     std::deque<btCmdNode*> cmdQue;
-    std::unordered_map<kvObj*, QREF> mp;  
+    // std::unordered_map<kvObj*, QREF> mp;  
     std::unique_ptr<KVNodeFin> root; // root node of the B+tree
     std::shared_ptr<KVLeafFin> head; // list head of leaf. All leafs are in one list. 
     // std::shared_ptr<KVLeafNodeFin> hnode; // list head of leaf. All leafs are in one list. 

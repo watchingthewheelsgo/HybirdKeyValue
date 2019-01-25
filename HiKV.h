@@ -29,13 +29,7 @@
 namespace hybridKV {
 void* schedule2(void* arg);
 	
-struct cmdInfo {
-	cmdType type;
-	void* key;
-	void* value;
-	void* ptr;
-};
-
+struct cmdInfo;
 class HiKV : public hyDB {
 public:
 	// typedef std::deque::iterator QITOR;
@@ -53,6 +47,7 @@ public:
 	static void BGWork(void* db);
 	void clearBGTime() {
 		tree_->tmr.setZero();
+		tree_->writeCnt = 0;
 	}
 	uint64_t getBGTime() {
 		return tree_->tmr.getDuration();
@@ -80,17 +75,17 @@ public:
 		return res;
 	}
 	void queue_push(cmdInfo* cmd) {
-		mt_.lock();
+		mtx_.lock();
 		que.push_back(cmd);
 		++qSize;
-		mt_.unlock();
+		mtx_.unlock();
 	}
 	cmdInfo* extraQue() {
-		mt_.lock();
+		mtx_.lock();
 		auto res = que.front();
 		que.pop_front();
 		--qSize;
-		mt_.unlock();
+		mtx_.unlock();
 		return res;
 	}
 	BplusTreeSplit* tree() {
@@ -107,7 +102,7 @@ public:
 
 private:
 	Config* cfg;
-	Mutex mt_;
+	Mutex mtx_;
 	// std::mutex mt_;
 	std::deque<cmdInfo*> que;
 	boost::lockfree::spsc_queue<cmdInfo*, boost::lockfree::capacity<1 << 21>> que2;
