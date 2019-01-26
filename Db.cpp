@@ -119,8 +119,9 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     node->key = (void*)rpKey;
     node->value = (void*)newVal;
     node->type = kUpdateType;
-    bt_grp[idx]->mutPush(node);
-    // bt_grp[idx]->cmdPush(node);
+    // bt_grp[idx]->mutPush(node);
+    bt_grp[idx]->cmdPush(node);
+    // bt_grp[idx]->lockfreePush(node);
     return 0;
 }
 // void DBImpl::signalBG() {
@@ -148,6 +149,7 @@ int DBImpl::Delete(const std::string& key) {
     node->ptr = nullptr;
     
     bt_grp[idx]->cmdPush(node);
+    // bt_grp[idx]->lockfreePush(node);
     return 0;
 }
 

@@ -321,37 +321,37 @@ KVLeafNodeSplit* BplusTreeSplit::leafSearch(const char* key) {
     return (KVLeafNodeSplit*) node;
 }
 int BplusTreeSplit::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
-//     LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
-//     auto leafnode = leafSearch(beginKey);
-//     while (leafnode) {
-//         std::vector<std::pair<std::string, int>> tmp_r;
-//         for (int slot = LEAF_KEYS; slot--;) {
-//             if (leafnode->hashes[slot] != 0)
-//                 tmp_r.push_back({leafnode->keys[slot], slot});
-//         }
-//         auto cmp = [](std::pair<std::string, int> &a, std::pair<std::string, int> &b) {
-//             return a.first < b.first;
-//         };
-//         std::sort(tmp_r.begin(), tmp_r.end(), cmp);
+    // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    auto leafnode = leafSearch(beginKey.c_str());
+    while (leafnode) {
+        std::vector<std::pair<std::string*, int>> tmp_r;
+        for (int slot = LEAF_KEYS; slot--;) {
+            if (leafnode->hashes[slot] != 0)
+                tmp_r.push_back({&leafnode->keys[slot], slot});
+        }
+        auto cmp = [](std::pair<std::string*, int> &a, std::pair<std::string*, int> &b) {
+            return *a.first < *b.first;
+        };
+        std::sort(tmp_r.begin(), tmp_r.end(), cmp);
         
-//         bool finished = false;
-//         auto itor = tmp_r.begin();
-//         while (itor < tmp_r.end() && itor->first < beginKey) ++itor;
-//         while (itor < tmp_r.end()) {
-//             finished = false;
-//             if(itor->first <= lastKey) {
-//                 output.push_back(std::string(leafnode->leaf->slots[itor->second]->val()));
-// #ifdef PM_READ_LATENCY_TEST
-//                 pload((uint64_t*)(leafnode->leaf->slots[itor->second]->val()), leafnode->leaf->slots[itor->second]->valsize());
-// #endif
-//             } else {
-//                 finished = true; break;
-//             }
-//             ++itor;
-//         }
-//         leafnode = finished? nullptr : leafnode->next;
+        bool finished = false;
+        auto itor = tmp_r.begin();
+        while (itor < tmp_r.end() && *itor->first < beginKey) ++itor;
+        while (itor < tmp_r.end()) {
+            finished = false;
+            if(*itor->first <= lastKey) {
+                output.push_back(std::string(leafnode->leaf->slots[itor->second]->val()));
+#ifdef PM_READ_LATENCY_TEST
+                pload((uint64_t*)(leafnode->leaf->slots[itor->second]->val()), leafnode->leaf->slots[itor->second]->valsize());
+#endif
+            } else {
+                finished = true; break;
+            }
+            ++itor;
+        }
+        leafnode = finished? nullptr : leafnode->next;
         
-//     }
+    }
     return 0;
 }
 int BplusTreeSplit::Delete(kvObj* k) {
@@ -700,25 +700,25 @@ KVLeafNode* BplusTree::leafSearch(const std::string &key) {
 // }
 // #else
 int BplusTree::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
-    LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
     auto leafnode = leafSearch(beginKey);
     while (leafnode) {
-        std::vector<std::pair<std::string, int>> tmp_r;
+        std::vector<std::pair<std::string*, int>> tmp_r;
         for (int slot = LEAF_KEYS; slot--;) {
             if (leafnode->hashes[slot] != 0)
-                tmp_r.push_back({leafnode->keys[slot], slot});
+                tmp_r.push_back({&leafnode->keys[slot], slot});
         }
-        auto cmp = [](std::pair<std::string, int> &a, std::pair<std::string, int> &b) {
-            return a.first < b.first;
+        auto cmp = [](std::pair<std::string*, int> &a, std::pair<std::string*, int> &b) {
+            return *a.first < *b.first;
         };
         std::sort(tmp_r.begin(), tmp_r.end(), cmp);
         
         bool finished = false;
         auto itor = tmp_r.begin();
-        while (itor < tmp_r.end() && itor->first < beginKey) ++itor;
+        while (itor < tmp_r.end() && *itor->first < beginKey) ++itor;
         while (itor < tmp_r.end()) {
             finished = false;
-            if(itor->first <= lastKey) {
+            if(*itor->first <= lastKey) {
                 output.push_back(std::string(leafnode->leaf->slots[itor->second]->val()));
 #ifdef PM_READ_LATENCY_TEST
                 pload((uint64_t*)(leafnode->leaf->slots[itor->second]->val()), leafnode->leaf->slots[itor->second]->valsize());
@@ -736,11 +736,11 @@ int BplusTree::Scan(const std::string& beginKey, const std::string& lastKey, std
 // #endif
 // #endif
 int BplusTree::Delete(const std::string& key) {
-    LOG("Delete Key" << key.c_str());
+    // LOG("Delete Key" << key.c_str());
     auto leafnode = leafSearch(key);
     
     if (!leafnode) {
-        LOG("NO such Key");
+        // LOG("NO such Key");
         return -1;
     }
     const uint8_t hash = PearsonHash(key.c_str(), key.size());

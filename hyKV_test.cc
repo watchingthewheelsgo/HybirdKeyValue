@@ -46,11 +46,11 @@ bool isBreakPoint(int i) {
             || (i==60*mbi) || (i==70*mbi) || (i==80*mbi) || (i==90*mbi) || (i==100*mbi);
 }
 
-void testBplusTreeList(int num, int keyIdx) {
-    FILE* logFd = fopen("/home/why/logBTree122.txt","a+");
-    FILE* staticsFd = fopen("/home/why/staticsBTree122.txt", "a+");
-    fprintf(logFd,"Function testBplusTreeList performance.(List version).\n");
-    printf("Function testBplusTreeList performance.(List version).\n");
+void testBplusTreeSplist(int num, int keyIdx) {
+    FILE* logFd = fopen("/home/why/logBTree126.txt","a+");
+    FILE* staticsFd = fopen("/home/why/staticsBTree126.txt", "a+");
+    fprintf(logFd,"Function testBplusTreeSplist performance.(Slot version).\n");
+    printf("Function testBplusTreeSplist performance.(Slot version).\n");
 #ifdef PM_WRITE_LATENCY_TEST
     LOG("PM WR latency = "<< pm_latecny_write);
     fprintf(logFd, "PM WR Latency = %d(ns).\n", pm_latecny_write);
@@ -62,8 +62,8 @@ void testBplusTreeList(int num, int keyIdx) {
 #endif
     Config* cfg = new Config();
     // auto tree = new BplusTreeList(0);
-    // auto tree = new BplusTree();
-    auto tree = new BplusTreeSplit(0);
+    auto tree = new BplusTree();
+    // auto tree = new BplusTreeSplit(0);
     // btree_map<string, string> tree;
     std::vector<std::string> keys;
     std::vector<int> keyLens = {16, 40, 64};
@@ -88,8 +88,8 @@ void testBplusTreeList(int num, int keyIdx) {
         keys.push_back(key);
 
         tmr_obj.start();
-        auto k_obj = new kvObj(key, true);
-        auto v_obj = new kvObj(val, true);
+        // auto k_obj = new kvObj(key, true);
+        // auto v_obj = new kvObj(val, true);
         // auto kv_pair = new KVPairFin(k_obj, v_obj);
 #ifdef PM_WRITE_LATENCY_TEST
         pflush((uint64_t*)k_obj->data(), k_obj->size());
@@ -99,9 +99,9 @@ void testBplusTreeList(int num, int keyIdx) {
         tmr_obj.stop();
 
         tmr_load.start();
-        tree->Insert(k_obj, v_obj);
+        // tree->Insert(k_obj, v_obj);
         // tree->Insert(kv_pair);
-        // tree->Put(key, val);
+        tree->Put(key, val);
         // tree.insert(key, val);
         tmr_load.stop();
 
@@ -136,22 +136,22 @@ void testBplusTreeList(int num, int keyIdx) {
             // fprintf(staticsFd, "inner update time  = %d(us), update cnt = %d.\n", tree->tmr_inner.getDuration(), tree->innerUpdateCnt);
             // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
             
-            TimerRDT tmr_rd, tmr_idle_rd;
-            int sId = random() % (keys.size()-2*mbi-1);
-            for (int k=0; k<2*mbi; ++k) {
-                std::string rdKey = keys[sId+k];
-                std::string rdVal;
+            // TimerRDT tmr_rd, tmr_idle_rd;
+            // int sId = random() % (keys.size()-2*mbi-1);
+            // for (int k=0; k<2*mbi; ++k) {
+            //     std::string rdKey = keys[sId+k];
+            //     std::string rdVal;
 
-                tmr_rd.start();
-                // rdVal = tree.find(rdKey)->second;
-                tree->Get(rdKey, &rdVal);
-                tmr_rd.stop();
+            //     tmr_rd.start();
+            //     // rdVal = tree.find(rdKey)->second;
+            //     tree->Get(rdKey, &rdVal);
+            //     tmr_rd.stop();
 
-                tmr_idle_rd.start();
-                tmr_idle_rd.stop();
-            }
-            fprintf(logFd, "Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
-            printf("Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
+            //     tmr_idle_rd.start();
+            //     tmr_idle_rd.stop();
+            // }
+            // fprintf(logFd, "Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
+            // printf("Get perf test 2M, time = %d.\n", tmr_rd.getDuration()-tmr_idle_rd.getDuration());
         }
 
     }
@@ -201,8 +201,8 @@ void testBplusTreeList(int num, int keyIdx) {
                 keys.push_back(ky);
                 
                 tmr_alloc.start();
-                auto k_obj_wr = new kvObj(ky, true);
-                auto v_obj_wr = new kvObj(vl, true);
+                // auto k_obj_wr = new kvObj(ky, true);
+                // auto v_obj_wr = new kvObj(vl, true);
                 // auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
 #ifdef PM_WRITE_LATENCY_TEST
                 pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
@@ -212,9 +212,9 @@ void testBplusTreeList(int num, int keyIdx) {
                 tmr_alloc.stop();
 
                 tmr_op.start();
-                tree->Insert(k_obj_wr, v_obj_wr);
+                // tree->Insert(k_obj_wr, v_obj_wr);
                 // tree->Insert(kv_pair);
-                // tree->Put(ky, vl);
+                tree->Put(ky, vl);
                 // tree.insert(ky, vl);
                 tmr_op.stop();
                 tmr_idle_op.start();
@@ -324,8 +324,8 @@ void testBplusTreeList(int num, int keyIdx) {
                 auto vl = randomString(valLength);
 
                 tmr_alloc.start();
-                auto k_obj_wr = new kvObj(ky, false);
-                auto v_obj_wr = new kvObj(vl, true);
+                // auto k_obj_wr = new kvObj(ky, false);
+                // auto v_obj_wr = new kvObj(vl, true);
                 // auto kv_pair = new KVPairFin(k_obj_wr, v_obj_wr);
 #ifdef PM_WRITE_LATENCY_TEST
                 // pflush((uint64_t*)k_obj_wr->data(), k_obj_wr->size());
@@ -335,8 +335,8 @@ void testBplusTreeList(int num, int keyIdx) {
                 tmr_alloc.stop();
 
                 tmr_op.start();
-                tree->Update(k_obj_wr, v_obj_wr);
-                // tree->Update(ky, vl);
+                // tree->Update(k_obj_wr, v_obj_wr);
+                tree->Update(ky, vl);
                 // tree->Insert(kv_pair);
                 // tree.insert(ky, vl);
                 tmr_op.stop();
@@ -364,22 +364,24 @@ void testBplusTreeList(int num, int keyIdx) {
             // fprintf(staticsFd, "skewed Leaf count = %d. dupKeyCnt = %d.\n", tree->skewLeafCnt, tree->dupKeyCnt);
             
         } else if (op == 5) {
-            // TimerRDT tmr_op, tmr_idle_op;
-            // int sId = random() % (nums-sz*mbi);
+            TimerRDT tmr_op, tmr_idle_op;
+            int sId = random() % (nums-sz*mbi);
             // tree->setZero();
-            // for (int k=0; k<sz*mbi; ++k) {
-            //     auto ky = keys[sId+k];
-            //     // auto vl = randomString(valLength);
-            //     std::vector<std::string> val;
+            for (int k=0; k<sz*mbi; ++k) {
+                auto bk = keys[sId+k];
+                auto ek = bk;
+                ek[ek.size()-1] += 10;
+                // auto vl = randomString(valLength);
+                std::vector<std::string> val;
 
-            //     tmr_op.start();
-            //     tree->Scan(ky, 10, val);
-            //     tmr_op.stop();
-            //     tmr_idle_op.start();
-            //     tmr_idle_op.stop();
-            // }
-            // fprintf(logFd, "Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
-            // printf("Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+                tmr_op.start();
+                tree->Scan(bk, ek, val);
+                tmr_op.stop();
+                tmr_idle_op.start();
+                tmr_idle_op.stop();
+            }
+            fprintf(logFd, "Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
+            printf("Under %dM KV pairs, Scan %dM takes %d (us).\n", nums/mbi, sz, tmr_op.getDuration()-tmr_idle_op.getDuration()); 
             // printf("FillSlot time  = %d(us), new cache time = %d(us).\n", tree->tmr_insert.getDuration(), tree->tmr_cache.getDuration());
             // printf("Leafnode push_back cnt = %d, leaf compare cnt = %d.", tree->pushBackCnt, tree->leafCmpCnt);
             // printf("Leaf search time = %d(us), inner compare cnt = %d.\n", tree->tmr_search.getDuration(), tree->logCmpCnt);
@@ -809,7 +811,7 @@ void dataStructureTest() {
         if (ch == 0) {
             testHashTable(size, keyLen);
         } else if (ch == 1) {
-            testBplusTreeList(size, keyLen);
+            testBplusTreeSplist(size, keyLen);
         } else if (ch==2) {
             testSkipList(size, keyLen);
         } else {
@@ -1154,8 +1156,8 @@ int main(int argc, char** argv) {
         }
     }
     init_pflush(cpu_speed_mhz, pm_latecny_write, pm_latency_read);
-    // dataStructureTest();
-    kvStoreTest();
+    dataStructureTest();
+    // kvStoreTest();
     return 0;
 
 
