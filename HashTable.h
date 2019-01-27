@@ -93,9 +93,11 @@ public:
 	void reset(int i) {
 		assert(i < size_);
 		table[i] = nullptr;
-// #ifdef PM_WRITE_LATENCY_TEST
-      // pflush((uint64_t*)(&table[i]), sizeof(void*));
-// #endif
+#ifdef HiKV_TEST
+#ifdef PM_WRITE_LATENCY_TEST
+      pflush((uint64_t*)(&table[i]), sizeof(void*));
+#endif
+#endif
 	}
     dictEntry* getHeadIndex(uint32_t index) {
         return table[index];
@@ -103,18 +105,20 @@ public:
 	void decrNode() { 
 		assert(used_ > 0);
 		--used_;
-// #ifdef PM_WRITE_LATENCY_TEST
-//         pflush((uint64_t*)(&used_), sizeof(uint32_t));
-// #endif
+#ifdef HiKV_TEST
+#ifdef PM_WRITE_LATENCY_TEST
+        pflush((uint64_t*)(&used_), sizeof(uint32_t));
+#endif
+#endif
 		assert(used_ >= 0);
 	}
     void incrNode() { 
     	++used_;
-// #ifdef HiKV_TEST
-// #ifdef PM_WRITE_LATENCY_TEST
-//         pflush((uint64_t*)(&used_), sizeof(uint32_t));
-// #endif
-// #endif
+#ifdef HiKV_TEST
+#ifdef PM_WRITE_LATENCY_TEST
+        pflush((uint64_t*)(&used_), sizeof(uint32_t));
+#endif
+#endif
     }
     // Test Use. declared to test "Hash Conflict". 
     int maxConflict;

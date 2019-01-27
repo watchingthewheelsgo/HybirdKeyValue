@@ -24,8 +24,8 @@ namespace hybridKV {
 int hyDB::Open(hyDB** db, const std::string dbname, int size) {
     *db = nullptr;
     if (dbname == "PmemKV") {
-        PmemKV* newDB = new PmemKV();
-        *db = newDB;
+        // PmemKV* newDB = new PmemKV();
+        // *db = newDB;
     } else if (dbname == "HiKV") {
         HiKV* newDB = new HiKV();
         HiKV::BGWork(reinterpret_cast<void*>(newDB));
@@ -94,15 +94,15 @@ int DBImpl::Put(const std::string& key, const std::string& val) {
     node->key = newKey;
     node->value = value;
     node->type = kInsertType;
-    bt_grp[idx]->mutPush(node);
-    // bt_grp[idx]->cmdPush(node);
+    // bt_grp[idx]->mutPush(node);
+    bt_grp[idx]->cmdPush(node);
     // bt_grp[idx]->lockfreePush(node);
     return 0;
     
 }
 
 int DBImpl::Update(const std::string& key, const std::string& val) {
-    kvObj* rpKey = new kvObj(key, false);
+    kvObj* rpKey = new kvObj(key, true);
     kvObj* newVal = new kvObj(val, true);
 #ifdef PM_WRITE_LATENCY_TEST
     pflush((uint64_t*)newVal->data(), newVal->size());
@@ -135,7 +135,7 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
 // }
 int DBImpl::Delete(const std::string& key) {
     
-    kvObj* delKey = new kvObj(key, false);
+    kvObj* delKey = new kvObj(key, true);
     Dict::dictEntry* entryPointer = nullptr;
     int idx;
     if (ht_->Delete(delKey, idx) == -1)
@@ -176,21 +176,21 @@ int DBImpl::Scan(const std::string& beginKey, int n, std::vector<std::string>& o
     return 0;
 }
 
-int DBImpl::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
-    // kvObj bgKey(beginKey, false);
-    // kvObj edKey(lastKey, false);
+int DBImpl::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::vector<std::string>*>& output) {
+    kvObj* bgKey = new kvObj(beginKey, true);
+    kvObj* edKey = new kvObj(lastKey, true);
     // std::vector<scanRes*> result(bt_size);
     
-    // for (int idx=0; idx<bt_size; ++idx) {
-    //     btCmdNode* node = new btCmdNode;
-    //     node->val = (void*)(&edKey);
-    //     node->key = (void*)(&bgKey);
-    //     result[idx] = new scanRes();
-    //     node->ptr = (void*)(result[idx]);
-    //     node->type = kScanNorType;
+    for (int idx=0; idx<bt_size; ++idx) {
+        cmdInfo* node = new cmdInfo;
+        node->value = (void*)(edKey);
+        node->key = (void*)(bgKey);
+        // result[idx] = new scanRes();
+        node->ptr = (void*)(output[idx]);
+        node->type = kScanNorType;
         
-    //     bt_grp[idx]->cmd_push(node);
-    // }
+        bt_grp[idx]->cmdPush(node);
+    }
     // for (int idx=0; idx<bt_size; ++idx) {
     //     while (reinterpret_cast<uint64_t>(result[idx]->done.Acquire_Load()) == 0);
     // }
@@ -238,7 +238,7 @@ void DBImpl::BGWork(void* db) {
     
 void DBImpl::BgInit() {
     for (int i=0; i<bt_size; ++i) {
-        thrds->CreateJobs(schedulev2, reinterpret_cast<void*>(bt_grp[i]), i);
+        thrds->CreateJobs(schedule, reinterpret_cast<void*>(bt_grp[i]), i);
     }
 }
 int call(cmdInfo* cmd) {
@@ -277,7 +277,9 @@ void* schedulev2(void* arg) {
                     //     break;
                     case kScanNorType:
                         // assert(curBT->emptyQue());
-                        // res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
+                        curBT->tmr.start();
+                        res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->value, (std::vector<std::string>*)cmd->ptr);
+                        curBT->tmr.stop();
                         break;
                     case kFlushType:
                         // curBT->clock();
@@ -306,7 +308,7 @@ void* schedule(void* arg) {
     // maybe add control with onSchedule();
     while (true) {
 
-        while (curBT->queSize() > 100) {
+        while (curBT->queSize() > 0) {
             cmdInfo* cmd = curBT->cmdPop();
             // cmdInfo* cmd = curBT->lockfreePop();
             int res = 0;
@@ -333,8 +335,9 @@ void* schedule(void* arg) {
                 //     res = curSL->Scan(cmd->key, (uint64_t)(cmd->priv), *(reinterpret_cast<scanRes*>(cmd->val)));
                 //     break;
                 case kScanNorType:
-                    // assert(curBT->emptyQue());
-                    // res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->val, reinterpret_cast<scanRes*>(cmd->ptr));
+                    curBT->tmr.start();
+                    res = curBT->Scan((kvObj*)cmd->key, (kvObj*)cmd->value, (std::vector<std::string>*)cmd->ptr);
+                    curBT->tmr.stop();
                     break;
                 // case kFlushType:
                 //     // curBT->clock();

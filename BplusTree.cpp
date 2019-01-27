@@ -114,6 +114,7 @@ int BplusTreeSplit::Insert(kvObj* k, kvObj* v) {
 }
 
 int BplusTreeSplit::Update(kvObj* key, kvObj* val) {
+    ++updateCnt;
     // LOG("Up");
     return Insert(key, val);
 }
@@ -165,8 +166,8 @@ bool BplusTreeSplit::leafFillSlotForKey(KVLeafNodeSplit* leafnode, const uint8_t
     //     }
     // }
     // return false;
-    // if (key_match_slot >= 0)
-        // ++dupKeyCnt;
+    if (key_match_slot >= 0)
+        ++dupKeyCnt;
     int slot = key_match_slot>=0 ? key_match_slot : last_empty_slot;
     if (slot >= 0) {
         leafFillSpecificSlot(leafnode, hash, key, val, slot);
@@ -322,6 +323,7 @@ KVLeafNodeSplit* BplusTreeSplit::leafSearch(const char* key) {
 }
 int BplusTreeSplit::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
     // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    ++scanCnt;
     auto leafnode = leafSearch(beginKey.c_str());
     while (leafnode) {
         std::vector<std::pair<std::string*, int>> tmp_r;
@@ -354,8 +356,45 @@ int BplusTreeSplit::Scan(const std::string& beginKey, const std::string& lastKey
     }
     return 0;
 }
+
+int BplusTreeSplit::Scan(kvObj* beginKey, kvObj* lastKey, std::vector<std::string>* output) {
+    ++scanCnt;
+    // LOG("Range: [ " << beginKey << ", " << lastKey <<" ]");
+    auto leafnode = leafSearch(beginKey->data());
+    while (leafnode) {
+        std::vector<std::pair<std::string*, int>> tmp_r;
+        for (int slot = LEAF_KEYS; slot--;) {
+            if (leafnode->hashes[slot] != 0)
+                tmp_r.push_back({&leafnode->keys[slot], slot});
+        }
+        auto cmp = [](std::pair<std::string*, int> &a, std::pair<std::string*, int> &b) {
+            return *a.first < *b.first;
+        };
+        std::sort(tmp_r.begin(), tmp_r.end(), cmp);
+        
+        bool finished = false;
+        auto itor = tmp_r.begin();
+        while (itor < tmp_r.end() && strcmp(itor->first->c_str(), beginKey->data()) < 0) ++itor;
+        while (itor < tmp_r.end()) {
+            finished = false;
+            if(strcmp(itor->first->c_str(), lastKey->data()) <= 0) {
+                output->push_back(std::string(leafnode->leaf->slots[itor->second]->val()));
+#ifdef PM_READ_LATENCY_TEST
+                pload((uint64_t*)(leafnode->leaf->slots[itor->second]->val()), leafnode->leaf->slots[itor->second]->valsize());
+#endif
+            } else {
+                finished = true; break;
+            }
+            ++itor;
+        }
+        leafnode = finished? nullptr : leafnode->next;
+        
+    }
+    return 0;
+}
 int BplusTreeSplit::Delete(kvObj* k) {
     // LOG("Delete Key" << key.c_str());
+    ++delCnt;
     const char* key = k->data();
     auto leafnode = leafSearch(key);
     
@@ -378,6 +417,7 @@ int BplusTreeSplit::Delete(kvObj* k) {
 }
 
 int BplusTreeSplit::Delete(const std::string& key) {
+    ++delCnt;
     // LOG("Delete Key" << key.c_str());
     auto leafnode = leafSearch(key.c_str());
     

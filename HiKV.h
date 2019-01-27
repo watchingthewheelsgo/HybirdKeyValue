@@ -42,12 +42,15 @@ public:
 	int Scan(const std::string& beginKey, int n, std::vector<std::string>& output) {
 		return 0;
 	}
-	int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
+	int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>* output);
 	int Update(const std::string& key, const std::string& val);
 	static void BGWork(void* db);
 	void clearBGTime() {
 		tree_->tmr.setZero();
 		tree_->writeCnt = 0;
+		tree_->scanCnt = 0;
+		tree_->updateCnt = 0;
+		tree_->delCnt = 0;
 	}
 	uint64_t getBGTime() {
 		return tree_->tmr.getDuration();
@@ -60,8 +63,8 @@ public:
 		return que.empty();
 	}
 	int queSize() {
-		return qSize;
-		// return qSize.load();
+		// return qSize;
+		return qSize.load();
 	}
 	void freePush(cmdInfo* cmd) {
 		que2.push(cmd);
@@ -107,8 +110,8 @@ private:
 	std::deque<cmdInfo*> que;
 	boost::lockfree::spsc_queue<cmdInfo*, boost::lockfree::capacity<1 << 21>> que2;
 	// boost::atomic<bool> done;
-	// std::atomic<int> qSize;
-	volatile int qSize; // que.size() is not safe when using -O2 opt, just use 'volatile' to gurantee consistancy 
+	std::atomic<int> qSize;
+	// volatile int qSize; // que.size() is not safe when using -O2 opt, just use 'volatile' to gurantee consistancy 
 	BplusTreeSplit* tree_;
 	HashTable* ht_;
 	ThreadPool* thrds;

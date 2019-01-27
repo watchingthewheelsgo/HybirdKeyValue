@@ -27,7 +27,7 @@ public:
     virtual int Put(const std::string& key, const std::string& val) = 0;
     virtual int Delete(const std::string& key) = 0;
     virtual int Scan(const std::string& beginKey, int n, std::vector<std::string>& output) = 0;
-    virtual int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) = 0;
+    virtual int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>* output) = 0;
     virtual int Update(const std::string& key, const std::string& val) = 0;
 
     // virtual void debug() = 0;

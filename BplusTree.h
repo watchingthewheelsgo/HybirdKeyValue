@@ -182,7 +182,7 @@ public:
     // typedef boost::lockfree::spesc_queue<cmdInfo*, boost::lockfree::capacity<1 << 21>>::iterator QITOR;
     typedef std::deque<cmdInfo*>* QPTR;
     typedef std::deque<cmdInfo*>::reference QREF;
-    BplusTreeSplit(int i): writeCnt(0), idx(i), qSize(0), mu_(new std::deque<cmdInfo*>()), mp_(new std::unordered_map<kvObj*, QREF>()), immu_(nullptr), existScan(false), flush(false)
+    BplusTreeSplit(int i): writeCnt(0), scanCnt(0), dupKeyCnt(0), updateCnt(0), delCnt(0), idx(i), qSize(0), mu_(new std::deque<cmdInfo*>()), mp_(new std::unordered_map<kvObj*, QREF>()), immu_(nullptr), existScan(false), flush(false)
     { };
     ~BplusTreeSplit(){ };
 
@@ -193,6 +193,7 @@ public:
     int Get(const std::string& key, std::string* val);
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
     int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
+    int Scan(kvObj* beginKey, kvObj* lastKey, std::vector<std::string>* output); 
     int Update(kvObj* key, kvObj* val);
 
 // #ifndef HiKV_TEST
@@ -212,32 +213,48 @@ public:
         --qSize;
         return res;
     }
-
-//--------------------------------------------------
-//  use std::deque<> and Mutex
-//--------------------------------------------------
     void cmdPush(cmdInfo* cmd) {
         mtx_.lock();
-        auto res = mp.find((kvObj*)cmd->key);
-        if (res != mp.end()) {
-            res->second->value = cmd->value;
-        } else {
-            que.push_back(cmd);
-            ++qSize;
-            mp.insert({(kvObj*)cmd->key, que.back()});
-        }
+
+        que.push_back(cmd);
+        ++qSize;
+    
         mtx_.unlock();
     }
 
     cmdInfo* cmdPop() {
         mtx_.lock();
         cmdInfo* cmd = que.front();
-        mp.erase((kvObj*)cmd->key);
         que.pop_front();
         --qSize;
         mtx_.unlock();
         return cmd;
     }
+//--------------------------------------------------
+//  use std::deque<> and Mutex
+//--------------------------------------------------
+    // void cmdPush(cmdInfo* cmd) {
+    //     mtx_.lock();
+    //     auto res = mp.find((kvObj*)cmd->key);
+    //     if (res != mp.end()) {
+    //         res->second->value = cmd->value;
+    //     } else {
+    //         que.push_back(cmd);
+    //         ++qSize;
+    //         mp.insert({(kvObj*)cmd->key, que.back()});
+    //     }
+    //     mtx_.unlock();
+    // }
+
+    // cmdInfo* cmdPop() {
+    //     mtx_.lock();
+    //     cmdInfo* cmd = que.front();
+    //     mp.erase((kvObj*)cmd->key);
+    //     que.pop_front();
+    //     --qSize;
+    //     mtx_.unlock();
+    //     return cmd;
+    // }
 //-------------------------------------------------------
 //  use two std::deque without mutex
 //------------------------------------------------------
@@ -290,13 +307,16 @@ public:
 
     // }
     bool finished() {
-        if (immu_.load() == nullptr && qSize.load() > 0) {
-            auto cmd = new cmdInfo();
-            cmd->type = kFlushType;
-            mutPush(cmd);
-        }
-        return (qSize.load() == 0) && (immu_.load() == nullptr);
+        return (queSize() == 0);
     }
+    // bool finished() {
+    //     if (immu_.load() == nullptr && qSize.load() > 0) {
+    //         auto cmd = new cmdInfo();
+    //         cmd->type = kFlushType;
+    //         mutPush(cmd);
+    //     }
+    //     return (qSize.load() == 0) && (immu_.load() == nullptr);
+    // }
     bool flushFlag() {
         return flush.load();
     }
@@ -310,12 +330,20 @@ public:
     void clearStats() {
         tmr.setZero();
         writeCnt = 0;
+        scanCnt = 0;
+        updateCnt = 0;
+        delCnt = 0;
+        dupKeyCnt = 0;
     }
 
 // #endif
     // to measure BG time consumtion and write count.
     TimerRDT tmr;
     uint64_t writeCnt;
+    uint64_t scanCnt;
+    uint64_t updateCnt;
+    uint64_t delCnt;
+    uint64_t dupKeyCnt;
 protected:
     int idx;
     KVLeafNodeSplit* leafSearch(const char* key);

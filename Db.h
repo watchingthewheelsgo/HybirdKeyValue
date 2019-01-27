@@ -32,7 +32,10 @@ public:
     int Put(const std::string& key, const std::string& val);
     int Delete(const std::string& key);
     int Scan(const std::string& beginKey, int n, std::vector<std::string>& output);
-    int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output);
+    int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>* output) {
+        return 0;
+    }
+    int Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::vector<std::string>*>& output);
     int Update(const std::string& key, const std::string& val);
     // void rdStartSignal();
     // void rdStopSignal();

@@ -35,10 +35,11 @@ void* schedule2(void* arg) {
     auto bgTree = db->tree();
     while(true) {
         // bool loop = db->emptyQue();
-        while (db->tree()->queSize() > 0) {
+        while (db->queSize() > 0) {
             // LOG(db->tree()->queSize());
+            cmdInfo* cmd = db->extraQue();
             // cmdInfo* cmd = db->freePop();
-            cmdInfo* cmd = bgTree->cmdPop();
+            // cmdInfo* cmd = bgTree->cmdPop();
             // mtx_.lock();
             // cmdInfo* cmd = bgTree->lockfreePop();
             // --qSize;
@@ -67,9 +68,9 @@ void* schedule2(void* arg) {
                     bgTree->tmr.stop();
                     break;
                 case kScanNorType:
-                    // LOG(4);
-                    // res = bgTree->Scan((kvObj*)cmd->key, (kvObj*)cmd->value, (scanRes*)cmd->ptr);
-                    // db->tmr_all.stop();
+                    bgTree->tmr.start();
+                    res = bgTree->Scan((kvObj*)cmd->key, (kvObj*)cmd->value, ((std::vector<std::string>*)cmd->ptr));
+                    bgTree->tmr.stop();
                     break;
                 // case kRoundStop:
                 //     // LOG(5);
@@ -119,10 +120,10 @@ int HiKV::Put(const std::string& key, const std::string& val) {
     cmd->value = (void*)value;
     cmd->ptr = nullptr;
     
-    // queue_push(cmd);
+    queue_push(cmd);
     // freePush(cmd);
     // mtx_.lock();
-    tree_->cmdPush(cmd);
+    // tree_->cmdPush(cmd);
     // tree_->lockfreePush(cmd);
     // ++qSize;
     // mtx_.unlock();
@@ -152,10 +153,10 @@ int HiKV::Update(const std::string& key, const std::string& val) {
     cmd->value = (void*)newVal;
     cmd->ptr = nullptr;
 
-    // queue_push(cmd);
+    queue_push(cmd);
     // freePush(cmd);
     // mtx_.lock();
-    tree_->cmdPush(cmd);
+    // tree_->cmdPush(cmd);
     // ++qSize;
     // mtx_.unlock();
     // LOG(this->queSize());
@@ -179,27 +180,25 @@ int HiKV::Delete(const std::string& key) {
     queue_push(cmd);
     return 0;
 }
-int HiKV::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>& output) {
+int HiKV::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>* output) {
     
-    kvObj* bgKey = new kvObj(beginKey, false);
-    kvObj* edKey = new kvObj(lastKey, false);
-
+    kvObj* bgKey = new kvObj(beginKey, true);
+    kvObj* edKey = new kvObj(lastKey, true);
+    // std::vector<std::string> res;
     auto cmd = new cmdInfo();
-    
-    scanRes res;
-    
+    // scanRes res;
     cmd->type = kScanNorType;
-    cmd->key = bgKey;
-    cmd->value = edKey;
-    cmd->ptr = (void*)(&res);
+    cmd->key = (void*)bgKey;
+    cmd->value = (void*)edKey;
+    cmd->ptr = (void*)(output);
     
     queue_push(cmd);
     
-    while (reinterpret_cast<uint64_t>(res.done.Acquire_Load()) == 0);
-    while (!res.elems.empty()) {
-        output.push_back(std::string(res.elems.front()));
-        res.elems.pop_front();
-    }
+    // while (reinterpret_cast<uint64_t>(res.done.Acquire_Load()) == 0);
+    // while (!res.elems.empty()) {
+    //     output.push_back(std::string(res.elems.front()));
+    //     res.elems.pop_front();
+    // }
     return 0;
 }
 
