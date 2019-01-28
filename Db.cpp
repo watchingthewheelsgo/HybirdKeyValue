@@ -94,8 +94,8 @@ int DBImpl::Put(const std::string& key, const std::string& val) {
     node->key = newKey;
     node->value = value;
     node->type = kInsertType;
-    // bt_grp[idx]->mutPush(node);
-    bt_grp[idx]->cmdPush(node);
+    bt_grp[idx]->mutPush(node);
+    // bt_grp[idx]->cmdPush(node);
     // bt_grp[idx]->lockfreePush(node);
     return 0;
     
@@ -119,8 +119,8 @@ int DBImpl::Update(const std::string& key, const std::string& val) {
     node->key = (void*)rpKey;
     node->value = (void*)newVal;
     node->type = kUpdateType;
-    // bt_grp[idx]->mutPush(node);
-    bt_grp[idx]->cmdPush(node);
+    bt_grp[idx]->mutPush(node);
+    // bt_grp[idx]->cmdPush(node);
     // bt_grp[idx]->lockfreePush(node);
     return 0;
 }
@@ -147,8 +147,8 @@ int DBImpl::Delete(const std::string& key) {
     node->value = nullptr;
     node->type = kDeleteType;
     node->ptr = nullptr;
-    
-    bt_grp[idx]->cmdPush(node);
+    bt_grp[idx]->mutPush(node);
+    // bt_grp[idx]->cmdPush(node);
     // bt_grp[idx]->lockfreePush(node);
     return 0;
 }
@@ -189,7 +189,9 @@ int DBImpl::Scan(const std::string& beginKey, const std::string& lastKey, std::v
         node->ptr = (void*)(output[idx]);
         node->type = kScanNorType;
         
-        bt_grp[idx]->cmdPush(node);
+        bt_grp[idx]->mutPush(node);
+        // bt_grp[idx]->cmdPush(node);
+        // bt_grp[idx]->lockfreePush(node);
     }
     // for (int idx=0; idx<bt_size; ++idx) {
     //     while (reinterpret_cast<uint64_t>(result[idx]->done.Acquire_Load()) == 0);
@@ -238,7 +240,7 @@ void DBImpl::BGWork(void* db) {
     
 void DBImpl::BgInit() {
     for (int i=0; i<bt_size; ++i) {
-        thrds->CreateJobs(schedule, reinterpret_cast<void*>(bt_grp[i]), i);
+        thrds->CreateJobs(schedulev2, reinterpret_cast<void*>(bt_grp[i]), i);
     }
 }
 int call(cmdInfo* cmd) {
@@ -308,7 +310,7 @@ void* schedule(void* arg) {
     // maybe add control with onSchedule();
     while (true) {
 
-        while (curBT->queSize() > 0) {
+        while (curBT->queSize() > 200) {
             cmdInfo* cmd = curBT->cmdPop();
             // cmdInfo* cmd = curBT->lockfreePop();
             int res = 0;

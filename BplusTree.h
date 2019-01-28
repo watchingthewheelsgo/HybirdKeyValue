@@ -202,7 +202,6 @@ public:
 //    use lock free spsc_queue
 //---------------------------------------------------
     void lockfreePush(cmdInfo* cmd) {
-        // auto res = 
         que2.push(cmd);
         ++qSize;
     }
@@ -213,63 +212,63 @@ public:
         --qSize;
         return res;
     }
-    void cmdPush(cmdInfo* cmd) {
-        mtx_.lock();
-
-        que.push_back(cmd);
-        ++qSize;
-    
-        mtx_.unlock();
-    }
-
-    cmdInfo* cmdPop() {
-        mtx_.lock();
-        cmdInfo* cmd = que.front();
-        que.pop_front();
-        --qSize;
-        mtx_.unlock();
-        return cmd;
-    }
-//--------------------------------------------------
-//  use std::deque<> and Mutex
-//--------------------------------------------------
     // void cmdPush(cmdInfo* cmd) {
     //     mtx_.lock();
-    //     auto res = mp.find((kvObj*)cmd->key);
-    //     if (res != mp.end()) {
-    //         res->second->value = cmd->value;
-    //     } else {
-    //         que.push_back(cmd);
-    //         ++qSize;
-    //         mp.insert({(kvObj*)cmd->key, que.back()});
-    //     }
+
+    //     que.push_back(cmd);
+    //     ++qSize;
+    
     //     mtx_.unlock();
     // }
 
     // cmdInfo* cmdPop() {
     //     mtx_.lock();
     //     cmdInfo* cmd = que.front();
-    //     mp.erase((kvObj*)cmd->key);
     //     que.pop_front();
     //     --qSize;
     //     mtx_.unlock();
     //     return cmd;
     // }
+//--------------------------------------------------
+//  use std::deque<> and Mutex
+//--------------------------------------------------
+    void cmdPush(cmdInfo* cmd) {
+        mtx_.lock();
+        auto res = mp.find((kvObj*)cmd->key);
+        if (res != mp.end()) {
+            res->second->value = cmd->value;
+        } else {
+            que.push_back(cmd);
+            ++qSize;
+            mp.insert({(kvObj*)cmd->key, que.back()});
+        }
+        mtx_.unlock();
+    }
+
+    cmdInfo* cmdPop() {
+        mtx_.lock();
+        cmdInfo* cmd = que.front();
+        mp.erase((kvObj*)cmd->key);
+        que.pop_front();
+        --qSize;
+        mtx_.unlock();
+        return cmd;
+    }
 //-------------------------------------------------------
 //  use two std::deque without mutex
 //------------------------------------------------------
 
     void mutPush(cmdInfo* cmd) {
         assert(mu_ != nullptr);
-        if (flush.load() == false && (cmd->type == kFlushType || cmd->type == kScanNorType || cmd->type == kScanNumType))
-            flush.store(true);
+        // if (flush.load() == false && (cmd->type == kFlushType || cmd->type == kScanNorType || cmd->type == kScanNumType))
+            // flush.store(true);
         // mtx_.lock();
-        if (cmd->type == kFlushType) {
+        if (cmd->type == kFlushType || cmd->type == kScanNorType || cmd->type == kScanNumType) {
             mu_->push_back(cmd);
             ++qSize;
         } else {
             auto res = mp_->find((kvObj*)cmd->key);
-            if (res != mp_->end()) {
+            if (res != mp_->end() && (res->second->type == kInsertType || res->second->type == kUpdateType)) {
                 res->second->value = cmd->value;
             } else {
                 mu_->push_back(cmd);
@@ -280,16 +279,17 @@ public:
         // mtx_.unlock();
         // mu_->push_back(cmd);
         // ++qSize;   
-        if (qSize.load() > 100 || flush.load() == true) {    
-        
+        // if (qSize.load() > 50 || flush.load() == true) {    
+        if (qSize.load() > 200) {  
             if (immu_.load() == nullptr) {
                 // mtx_.lock();
                 immu_.store(mu_);
                 mu_ = new std::deque<cmdInfo*>();
-                delete mp_;
-                mp_ = new std::unordered_map<kvObj*, QREF>();
+                // delete mp_;
+                // mp_ = new std::unordered_map<kvObj*, QREF>();
+                mp_->clear();
                 qSize.store(0);
-                flush.store(false);
+                // flush.store(false);
                 // mtx_.unlock();
             }
         }
@@ -303,20 +303,18 @@ public:
     void resetList() {
         immu_.store(nullptr);
     }
-    // void immutPop() {
 
+    // bool finished() {
+    //     return (queSize() <= 200);
     // }
     bool finished() {
-        return (queSize() == 0);
+        if (immu_.load() == nullptr && qSize.load() > 200) {
+            auto cmd = new cmdInfo();
+            cmd->type = kFlushType;
+            mutPush(cmd);
+        }
+        return (qSize.load() <= 200) && (immu_.load() == nullptr);
     }
-    // bool finished() {
-    //     if (immu_.load() == nullptr && qSize.load() > 0) {
-    //         auto cmd = new cmdInfo();
-    //         cmd->type = kFlushType;
-    //         mutPush(cmd);
-    //     }
-    //     return (qSize.load() == 0) && (immu_.load() == nullptr);
-    // }
     bool flushFlag() {
         return flush.load();
     }

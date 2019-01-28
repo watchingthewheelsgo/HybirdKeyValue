@@ -37,13 +37,8 @@ void* schedule2(void* arg) {
         // bool loop = db->emptyQue();
         while (db->queSize() > 0) {
             // LOG(db->tree()->queSize());
-            cmdInfo* cmd = db->extraQue();
-            // cmdInfo* cmd = db->freePop();
-            // cmdInfo* cmd = bgTree->cmdPop();
-            // mtx_.lock();
-            // cmdInfo* cmd = bgTree->lockfreePop();
-            // --qSize;
-            // mtx_.unlock();
+            // cmdInfo* cmd = db->extraQue();
+            cmdInfo* cmd = db->freePop();
             cmdType type = cmd->type;
             int res = 0;
             switch (type) {
@@ -120,8 +115,8 @@ int HiKV::Put(const std::string& key, const std::string& val) {
     cmd->value = (void*)value;
     cmd->ptr = nullptr;
     
-    queue_push(cmd);
-    // freePush(cmd);
+    // queue_push(cmd);
+    freePush(cmd);
     // mtx_.lock();
     // tree_->cmdPush(cmd);
     // tree_->lockfreePush(cmd);
@@ -153,8 +148,8 @@ int HiKV::Update(const std::string& key, const std::string& val) {
     cmd->value = (void*)newVal;
     cmd->ptr = nullptr;
 
-    queue_push(cmd);
-    // freePush(cmd);
+    // queue_push(cmd);
+    freePush(cmd);
     // mtx_.lock();
     // tree_->cmdPush(cmd);
     // ++qSize;
@@ -176,8 +171,8 @@ int HiKV::Delete(const std::string& key) {
     cmd->key = (void*)delKey;
     cmd->value = nullptr;
     cmd->ptr = nullptr;
-
-    queue_push(cmd);
+    freePush(cmd);
+    // queue_push(cmd);
     return 0;
 }
 int HiKV::Scan(const std::string& beginKey, const std::string& lastKey, std::vector<std::string>* output) {
@@ -191,8 +186,8 @@ int HiKV::Scan(const std::string& beginKey, const std::string& lastKey, std::vec
     cmd->key = (void*)bgKey;
     cmd->value = (void*)edKey;
     cmd->ptr = (void*)(output);
-    
-    queue_push(cmd);
+    freePush(cmd);
+    // queue_push(cmd);
     
     // while (reinterpret_cast<uint64_t>(res.done.Acquire_Load()) == 0);
     // while (!res.elems.empty()) {
